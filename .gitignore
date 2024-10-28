@@ -1,0 +1,12 @@
+# Ignore node_modules folder
+node_modules/
+
+# Ignore .env files
+.env
+
+# Ignore compiled files
+*.class
+*.dll
+
+# Ignore build folder
+/build/
