@@ -1,62 +1,70 @@
-const mysql = require('mysql2/promise');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
 
-async function initializeDatabase() {
-    const connection = await mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASS,
+// Define the database file location
+const dbPath = path.resolve(__dirname, 'myApp.db');
+
+// Function to initialize the database
+function initializeDatabase() {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3.Database(dbPath, (err) => {
+            if (err) {
+                console.error("Error opening database:", err.message);
+                reject(err);
+                return;
+            }
+            console.log("Connected to SQLite database.");
+
+            // Create the users table if it doesn't exist
+            db.run(`
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    role TEXT DEFAULT 'user',
+                    api_calls INTEGER DEFAULT 0
+                )
+            `, (err) => {
+                if (err) {
+                    console.error("Error creating table:", err.message);
+                    reject(err);
+                    return;
+                }
+
+                // Check if the admin user exists and create one if not
+                const adminEmail = 'admin@admin.com';
+                const adminPassword = '111';
+                db.get("SELECT * FROM users WHERE email = ?", [adminEmail], async (err, row) => {
+                    if (err) {
+                        console.error("Error querying admin user:", err.message);
+                        reject(err);
+                        return;
+                    }
+
+                    if (!row) {
+                        // Hash the admin password and insert the admin user
+                        const hashedPassword = await bcrypt.hash(adminPassword, 10);
+                        db.run(`
+                            INSERT INTO users (email, password_hash, role)
+                            VALUES (?, ?, 'admin')
+                        `, [adminEmail, hashedPassword], (err) => {
+                            if (err) {
+                                console.error("Error creating admin user:", err.message);
+                                reject(err);
+                            } else {
+                                console.log("Admin user created with email 'admin@admin.com'.");
+                                resolve();
+                            }
+                        });
+                    } else {
+                        console.log("Admin user already exists.");
+                        resolve();
+                    }
+                });
+            });
+        });
     });
-
-    // Check if the database exists
-    const [databases] = await connection.query("SHOW DATABASES LIKE 'myApp';");
-
-    if (databases.length === 0) {
-        console.log("Database not found. Creating database 'myApp'...");
-
-        // Create the database
-        await connection.query("CREATE DATABASE myApp;");
-        console.log("Database 'myApp' created successfully.");
-
-        // Connect to the new database to create tables
-        await connection.changeUser({ database: 'myApp' });
-
-        // Create the users table
-        await connection.query(`
-            CREATE TABLE users (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                email VARCHAR(255) UNIQUE NOT NULL,
-                password_hash VARCHAR(255) NOT NULL,
-                role ENUM('user', 'admin') DEFAULT 'user',
-                api_calls INT DEFAULT 0
-            );
-        `);
-        console.log("Tables created successfully.");
-    } else {
-        console.log("Database 'myApp' already exists.");
-        await connection.changeUser({ database: 'myApp' });
-    }
-
-    // Check if an admin user already exists
-    const [rows] = await connection.query("SELECT * FROM users WHERE email = 'admin@admin.com'");
-    if (rows.length === 0) {
-        // Hash the password
-        const adminPassword = '111';
-        const hashedPassword = await bcrypt.hash(adminPassword, 10);
-
-        // Insert the admin user
-        await connection.query(`
-            INSERT INTO users (email, password_hash, role)
-            VALUES ('admin@admin.com', ?, 'admin')
-        `, [hashedPassword]);
-        
-        console.log("Admin user created with email 'admin@admin.com'.");
-    } else {
-        console.log("Admin user already exists.");
-    }
-
-    await connection.end();
 }
 
 module.exports = initializeDatabase;
