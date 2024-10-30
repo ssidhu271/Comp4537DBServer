@@ -183,9 +183,9 @@ initializeDatabase().then(() => {
                     res.end(JSON.stringify({ message: 'Login successful', token }));
                 }
             });
-        } else if (req.url.startsWith('/api/data') && req.method === 'GET') {
-            const user = verifyToken(req, res); // Use verifyToken to extract and verify the JWT
-            if (!user) return; // If token verification failed, verifyToken already handled the response
+        } else if (req.url === '/api/user-data' && req.method === 'GET') {
+            const user = verifyToken(req, res);
+            if (!user) return; // Token verification failed; response handled by verifyToken
         
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row) {
@@ -194,28 +194,72 @@ initializeDatabase().then(() => {
                     return;
                 }
         
-                // If user is an admin, return all users' API call counts
-                if (row.role === 'admin') {
-                    db.all('SELECT email, api_calls FROM users', (adminErr, allUsers) => {
-                        if (adminErr) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
-                        } else {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ data: allUsers }));
-                        }
-                    });
-                } else {
-                    // Regular user: only show their own API call count
-                    const userExceededLimit = row.api_calls >= 20;
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({
-                        api_calls: row.api_calls,
-                        message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit'
-                    }));
-                }
+                const userExceededLimit = row.api_calls >= 20;
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                    api_calls: row.api_calls,
+                    message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit'
+                }));
             });
-        } else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
+        } else if (req.url === '/api/admin-data' && req.method === 'GET') {
+            const user = verifyToken(req, res);
+            if (!user) return;
+        
+            // Check if user is an admin
+            db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
+                if (err || !row || row.role !== 'admin') {
+                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: 'Access denied' }));
+                    return;
+                }
+        
+                // Fetch all users' API calls if the user is an admin
+                db.all('SELECT email, api_calls FROM users', (adminErr, allUsers) => {
+                    if (adminErr) {
+                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
+                    } else {
+                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ data: allUsers }));
+                    }
+                });
+            });
+        }
+        
+        // else if (req.url.startsWith('/api/data') && req.method === 'GET') {
+        //     const user = verifyToken(req, res); // Use verifyToken to extract and verify the JWT
+        //     if (!user) return; // If token verification failed, verifyToken already handled the response
+        
+        //     db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
+        //         if (err || !row) {
+        //             res.writeHead(500, { 'Content-Type': 'application/json' });
+        //             res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
+        //             return;
+        //         }
+        
+        //         // If user is an admin, return all users' API call counts
+        //         if (row.role === 'admin') {
+        //             db.all('SELECT email, api_calls FROM users', (adminErr, allUsers) => {
+        //                 if (adminErr) {
+        //                     res.writeHead(500, { 'Content-Type': 'application/json' });
+        //                     res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
+        //                 } else {
+        //                     res.writeHead(200, { 'Content-Type': 'application/json' });
+        //                     res.end(JSON.stringify({ data: allUsers }));
+        //                 }
+        //             });
+        //         } else {
+        //             // Regular user: only show their own API call count
+        //             const userExceededLimit = row.api_calls >= 20;
+        //             res.writeHead(200, { 'Content-Type': 'application/json' });
+        //             res.end(JSON.stringify({
+        //                 api_calls: row.api_calls,
+        //                 message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit'
+        //             }));
+        //         }
+        //     });
+        // }
+         else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
             const token = req.headers['authorization'];
             if (!token) {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
