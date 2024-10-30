@@ -31,21 +31,32 @@ const parseBody = (req) => new Promise((resolve, reject) => {
 
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465, // Secure SMTP port for Gmail
+    secure: true, // Use SSL
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    }
-});
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+    logger: true, // Add this
+    debug: true,  // And this
+  });
 
-const sendResetCode = async (email, resetCode) => {
+  const sendResetCode = async (email, resetCode) => {
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Your App Name" <${process.env.EMAIL_USER}>`, // Better to specify a name
       to: email,
       subject: 'Password Reset Code',
-      text: `Your password reset code is: ${resetCode}`
+      text: `Your password reset code is: ${resetCode}`,
     };
-    return transporter.sendMail(mailOptions);
+  
+    try {
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Email sent: ', info.response);
+    } catch (error) {
+      console.error('Error sending email: ', error);
+      throw new Error('Failed to send email');
+    }
   };
 
 // Middleware to handle CORS and OPTIONS requests
