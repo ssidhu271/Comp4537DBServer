@@ -69,13 +69,15 @@ const corsMiddleware = (res) => {
 
 // Token verification middleware
 const verifyToken = (req, res) => {
-    const cookies = cookie.parse(req.headers.cookie || '');
-    const token = cookies.token;
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
     if (!token) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'No token provided' }));
         return null;
     }
+
     try {
         return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
@@ -176,27 +178,14 @@ initializeDatabase().then(() => {
                     res.end(JSON.stringify({ error: 'Invalid credentials' }));
                 } else {
                     const token = createToken(user);
-                    res.setHeader('Set-Cookie', cookie.serialize('token', token, { httpOnly: true }));
+                    // Send token in response, don't set httpOnly cookie
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ message: 'Login successful', token }));
                 }
             });
         } else if (req.url.startsWith('/api/data') && req.method === 'GET') {
-            const token = req.headers['authorization'];
-            if (!token) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Unauthorized access' }));
-                return;
-            }
-        
-            let user;
-            try {
-                user = jwt.verify(token, process.env.JWT_SECRET);
-            } catch (err) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Invalid token' }));
-                return;
-            }
+            const user = verifyToken(req, res); // Use verifyToken to extract and verify the JWT
+            if (!user) return; // If token verification failed, verifyToken already handled the response
         
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row) {
