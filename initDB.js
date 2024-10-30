@@ -23,7 +23,9 @@ function initializeDatabase() {
                     email TEXT UNIQUE NOT NULL,
                     password_hash TEXT NOT NULL,
                     role TEXT DEFAULT 'user',
-                    api_calls INTEGER DEFAULT 0
+                    api_calls INTEGER DEFAULT 0,
+                    reset_code TEXT,
+                    reset_expires INTEGER
                 )
             `, (err) => {
                 if (err) {

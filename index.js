@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const initializeDatabase = require('./initDB'); // Import the DB initialization module
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8888;
 require('dotenv').config();
 
 // Connect to the SQLite database
@@ -56,8 +56,56 @@ initializeDatabase().then(() => {
             res.writeHead(204);
             return res.end();
         }
-
-        if (req.url === '/register' && req.method === 'POST') {
+                // Forgot Password - Step 1: Generate and send reset code
+                if (req.url === '/forgot-password' && req.method === 'POST') {
+                    const { email } = await parseBody(req);
+        
+                    // Generate a reset code
+                    const resetCode = crypto.randomInt(100000, 999999).toString();
+                    
+                    // Store reset code in database (you may want to add a reset_code and reset_expires fields to your users table)
+                    db.run('UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?', 
+                        [resetCode, Date.now() + 15 * 60 * 1000, email], async (err) => { // 15-minute expiry
+                        if (err) {
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
+                        }
+                        try {
+                            await sendResetCode(email, resetCode);
+                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ message: 'Reset code sent to email' }));
+                        } catch (emailError) {
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.end(JSON.stringify({ error: 'Failed to send email' }));
+                        }
+                    });
+                }
+        
+                // Forgot Password - Step 2: Verify reset code and reset password
+                else if (req.url === '/reset-password' && req.method === 'POST') {
+                    const { email, resetCode, newPassword } = await parseBody(req);
+        
+                    // Verify reset code and expiration
+                    db.get('SELECT reset_code, reset_expires FROM users WHERE email = ?', [email], async (err, user) => {
+                        if (err || !user || user.reset_code !== resetCode || user.reset_expires < Date.now()) {
+                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
+                        }
+        
+                        // Reset the password
+                        const hashedPassword = await bcrypt.hash(newPassword, 10);
+                        db.run('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?', 
+                            [hashedPassword, email], (updateErr) => {
+                            if (updateErr) {
+                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'Failed to reset password' }));
+                            } else {
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                            }
+                        });
+                    });
+                } else if (req.url === '/register' && req.method === 'POST') {
             const { email, password, role } = await parseBody(req);
             const hashedPassword = await bcrypt.hash(password, 10);
             db.run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hashedPassword, role || 'user'], (err) => {
