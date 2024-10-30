@@ -61,7 +61,7 @@ initializeDatabase().then(() => {
                     const { email } = await parseBody(req);
         
                     // Generate a reset code
-                    const resetCode = crypto.randomInt(100000, 999999).toString();
+                    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
                     
                     // Store reset code in database (you may want to add a reset_code and reset_expires fields to your users table)
                     db.run('UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?', 
