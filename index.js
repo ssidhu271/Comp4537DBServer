@@ -121,26 +121,39 @@ initializeDatabase().then(() => {
         
                 // Forgot Password - Step 2: Verify reset code and reset password
                 else if (req.url === '/reset-password' && req.method === 'POST') {
-                    const { email, resetCode, newPassword } = parseBody(req);
-        
-                    // Verify reset code and expiration
-                    db.get('SELECT reset_code, reset_expires FROM users WHERE email = ?', [email], async (err, user) => {
-                        if (err || !user || user.reset_code !== resetCode || user.reset_expires < Date.now()) {
+                    const { email, resetCode, newPassword } = await parseBody(req);
+                
+                    db.get('SELECT reset_code, reset_expires FROM users WHERE email = ?', [email], (err, user) => {
+                        if (err) {
+                            console.error('Database error:', err);
+                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            return res.end(JSON.stringify({ error: 'Database error' }));
+                        }
+                
+                        if (!user || user.reset_code !== resetCode || user.reset_expires < Date.now()) {
                             res.writeHead(400, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
                         }
-        
+                
                         // Reset the password
-                        const hashedPassword = await bcrypt.hash(newPassword, 10);
-                        db.run('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?', 
-                            [hashedPassword, email], (updateErr) => {
-                            if (updateErr) {
+                        bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
+                            if (hashErr) {
+                                console.error('Hashing error:', hashErr);
                                 res.writeHead(500, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({ error: 'Failed to reset password' }));
-                            } else {
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
-                                res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                                return res.end(JSON.stringify({ error: 'Failed to hash password' }));
                             }
+                
+                            db.run('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?', 
+                                [hashedPassword, email], (updateErr) => {
+                                if (updateErr) {
+                                    console.error('Database update error:', updateErr);
+                                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify({ error: 'Failed to reset password' }));
+                                } else {
+                                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                                    res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                                }
+                            });
                         });
                     });
                 } else if (req.url === '/register' && req.method === 'POST') {
