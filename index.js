@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 const initializeDatabase = require('./initDB'); // Import the DB initialization module
 const PORT = process.env.PORT || 8888;
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 // Connect to the SQLite database
@@ -18,9 +19,34 @@ const createToken = (user) => jwt.sign({ id: user.id, role: user.role }, process
 const parseBody = (req) => new Promise((resolve, reject) => {
     let body = '';
     req.on('data', chunk => body += chunk.toString());
-    req.on('end', () => resolve(JSON.parse(body)));
+    req.on('end', () => {
+        try {
+            resolve(JSON.parse(body));
+        } catch (error) {
+            reject(error);
+        }
+    });
     req.on('error', reject);
 });
+
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    }
+});
+
+const sendResetCode = async (email, resetCode) => {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Password Reset Code',
+        text: `Your password reset code is: ${resetCode}`
+    };
+    return transporter.sendMail(mailOptions);
+};
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (res) => {
