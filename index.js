@@ -40,13 +40,13 @@ const transporter = nodemailer.createTransport({
 
 const sendResetCode = async (email, resetCode) => {
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: 'Password Reset Code',
-        text: `Your password reset code is: ${resetCode}`
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: 'Password Reset Code',
+      text: `Your password reset code is: ${resetCode}`
     };
     return transporter.sendMail(mailOptions);
-};
+  };
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (res) => {
@@ -91,13 +91,14 @@ initializeDatabase().then(() => {
                     
                     // Store reset code in database (you may want to add a reset_code and reset_expires fields to your users table)
                     db.run('UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?', 
-                        [resetCode, Date.now() + 15 * 60 * 1000, email], async (err) => { // 15-minute expiry
+                        [resetCode, Date.now() + 15 * 60 * 1000, email], (err) => { // 15-minute expiry
                         if (err) {
+                            console.error('Database update error:', err);
                             res.writeHead(500, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
                         }
                         try {
-                            await sendResetCode(email, resetCode);
+                            sendResetCode(email, resetCode);
                             res.writeHead(200, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ message: 'Reset code sent to email' }));
                         } catch (emailError) {
@@ -109,7 +110,7 @@ initializeDatabase().then(() => {
         
                 // Forgot Password - Step 2: Verify reset code and reset password
                 else if (req.url === '/reset-password' && req.method === 'POST') {
-                    const { email, resetCode, newPassword } = await parseBody(req);
+                    const { email, resetCode, newPassword } = parseBody(req);
         
                     // Verify reset code and expiration
                     db.get('SELECT reset_code, reset_expires FROM users WHERE email = ?', [email], async (err, user) => {
