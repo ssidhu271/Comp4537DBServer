@@ -83,13 +83,13 @@ const verifyToken = (req, res) => {
 };
 
 const handleCors = (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
+    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-    // Preflight handling
-    if (req.method == 'OPTIONS') {
+    if (req.method === 'OPTIONS') {
         res.statusCode = 204; // No Content
         res.end();
         return true;
@@ -101,10 +101,29 @@ const handleCors = (req, res) => {
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        if (handleCors(req, res)) return; // Exit if preflight
-      
-                // Forgot Password - Step 1: Generate and send reset code
-                if (req.url == '/forgot-password' && req.method == 'POST') {
+        handleCors(req, res);
+
+        if (req.method === 'OPTIONS') return;
+            if (req.url === '/login' && req.method === 'POST') {
+                const { email, password } = await parseBody(req);
+                db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+                    if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
+                        res.statusCode = 401;
+                        res.setHeader('Content-Type', 'application/json');
+                        return res.end(JSON.stringify({ error: 'Invalid credentials' }));
+                    }
+                    const token = createToken(user);
+                    res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
+                        httpOnly: true,
+                        secure: true,
+                        sameSite: 'None',
+                        path: '/',
+                    }));
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ message: 'Login successful' }));
+                });
+            } else if (req.url == '/forgot-password' && req.method == 'POST') {
                     const { email } = await parseBody(req);
                 
                     // Generate a reset code
@@ -205,30 +224,6 @@ initializeDatabase().then(() => {
                     res.statusCode = 201;
                     res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ message: 'User registered' }));
-                }
-            });
-        } else if (req.url == '/login' && req.method == 'POST') {
-            const { email, password } = await parseBody(req);
-            db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-                if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
-                    res.statusCode = 401;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
-                    res.setHeader('Access-Control-Allow-Credentials', 'true'); 
-                    res.end(JSON.stringify({ error: 'Invalid credentials' }));
-                } else {
-                    const token = createToken(user);
-                    res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'None', //change to None for cross-site cookies
-                        path: '/',
-                    }));
-                    res.statusCode = 200;
-                    res.setHeader('Content-Type', 'application/json');
-                    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
-                    res.setHeader('Access-Control-Allow-Credentials', 'true'); 
-                    res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
         } else if (req.url == '/api/user-data' && req.method == 'GET') {
