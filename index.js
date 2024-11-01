@@ -60,8 +60,8 @@ const transporter = nodemailer.createTransport({
   };
 
 // Middleware to handle CORS and OPTIONS requests
-const corsMiddleware = (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net/');
+const corsMiddleware = (res) => {
+    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -91,7 +91,7 @@ const verifyToken = (req, res) => {
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        corsMiddleware(req, res);
+        corsMiddleware(res);
         if (req.method === 'OPTIONS') {
             res.writeHead(204);
             return res.end();
