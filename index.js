@@ -205,7 +205,9 @@ initializeDatabase().then(() => {
                         sameSite: 'Strict',  // Helps prevent CSRF attacks
                         path: '/',           // Makes cookie accessible with all requests to this server
                     }));
-                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.writeHead(200, { 'Content-Type': 'application/json',
+                        'Access-Control-Allow-Origin': '*', // Allow all origins
+                     });
                     res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
