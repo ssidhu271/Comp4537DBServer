@@ -93,7 +93,7 @@ initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
         corsMiddleware(res);
         if (req.method === 'OPTIONS') {
-            res.writeHead(204);
+            res.writeHead(200);
             return res.end();
         }
                 // Forgot Password - Step 1: Generate and send reset code
@@ -124,7 +124,8 @@ initializeDatabase().then(() => {
                             }
                             try {
                                 sendResetCode(email, resetCode);
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
                                 res.end(JSON.stringify({ message: 'Reset code sent to email' }));
                             } catch (emailError) {
                                 res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -173,7 +174,8 @@ initializeDatabase().then(() => {
                                     }
                                 });
                 
-                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.statusCode = 200;
+                                res.setHeader('Content-Type', 'application/json');
                                 res.end(JSON.stringify({ message: 'Password reset successfully' }));
                             });
                         });
@@ -191,7 +193,6 @@ initializeDatabase().then(() => {
                 }
             });
         } else if (req.url === '/login' && req.method === 'POST') {
-            setCORSHeaders(res);  // Set CORS headers here as well
             const { email, password } = await parseBody(req);
             db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                 if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -223,7 +224,8 @@ initializeDatabase().then(() => {
                 }
         
                 const userExceededLimit = row.api_calls >= 20;
-                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({
                     api_calls: row.api_calls,
                     message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit',
@@ -248,7 +250,8 @@ initializeDatabase().then(() => {
                         res.writeHead(500, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
                     } else {
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
                         res.end(JSON.stringify({ data: allUsers }));
                     }
                 });
@@ -271,7 +274,8 @@ initializeDatabase().then(() => {
                             res.writeHead(500, { 'Content-Type': 'application/json' });
                             res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
                         } else {
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
+                            res.statusCode = 200;
+                            res.setHeader('Content-Type', 'application/json');
                             res.end(JSON.stringify({ message: 'API call incremented successfully' }));
                         }
                     });
