@@ -61,7 +61,7 @@ const transporter = nodemailer.createTransport({
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (req, res) => {
-    const allowedOrigin = 'localhost:3000'; // Update with your frontend URL
+    const allowedOrigin = '*'; // Update with your frontend URL
 
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -254,19 +254,8 @@ initializeDatabase().then(() => {
                 });
             });
         } else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
-            const token = req.headers['authorization'];
-            if (!token) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: 'Unauthorized access' }));
-            }
-        
-            let user;
-            try {
-                user = jwt.verify(token, process.env.JWT_SECRET);
-            } catch (err) {
-                res.writeHead(403, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ error: 'Invalid token' }));
-            }
+            const user = verifyToken(req, res);
+            if (!user) return;
         
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row) {
