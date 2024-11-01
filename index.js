@@ -85,15 +85,14 @@ const verifyToken = (req, res) => {
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
         const origin = req.headers.origin;
         if (origin === allowedOrigin) {
             res.setHeader('Access-Control-Allow-Origin', origin);
         }
         res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-        
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');   
         // Handle OPTIONS preflight request
         if (req.method === 'OPTIONS') {
             res.writeHead(204);
