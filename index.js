@@ -59,25 +59,6 @@ const transporter = nodemailer.createTransport({
     }
   };
 
-// Middleware to handle CORS and OPTIONS requests
-const corsMiddleware = (req, res) => {
-    const origin = req.headers.origin;
-    if (origin && origin.includes('localhost')) {
-        res.setHeader('Access-Control-Allow-Origin', origin); // Allow only localhost for testing
-    }
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    if (req.method === 'OPTIONS') {
-        res.writeHead(204);
-        res.end(); // End OPTIONS preflight request here
-        return true;
-    }
-    return false;
-};
-
-
 // Token verification middleware
 const verifyToken = (req, res) => {
     const cookies = cookie.parse(req.headers.cookie || '');
@@ -104,12 +85,20 @@ const verifyToken = (req, res) => {
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        corsMiddleware(req, res);
-        if (req.method === 'OPTIONS') {
-            res.statusCode = 200;
-            res.setHeader('Content-Type', 'application/json');
-            return res.end();
+        const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const origin = req.headers.origin;
+        if (origin === allowedOrigin) {
+            res.setHeader('Access-Control-Allow-Origin', origin);
         }
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        
+        // Handle OPTIONS preflight request
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204);
+            return res.end();
+        }        
                 // Forgot Password - Step 1: Generate and send reset code
                 if (req.url === '/forgot-password' && req.method === 'POST') {
                     const { email } = await parseBody(req);
@@ -225,9 +214,9 @@ initializeDatabase().then(() => {
                     const token = createToken(user);
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,
-                        secure: false,
+                        secure: true,
                         maxAge: 60 * 60,
-                        sameSite: 'Lax', //change to None for cross-site cookies
+                        sameSite: 'None', //change to None for cross-site cookies
                         path: '/',
                     }));
                     res.statusCode = 200;
