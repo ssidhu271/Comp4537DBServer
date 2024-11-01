@@ -61,17 +61,18 @@ const transporter = nodemailer.createTransport({
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (res) => {
-    const allowedOrigins = ['http://localhost:3000', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net/'];
-    const origin = req.headers.origin;
+    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
 
-    if (allowedOrigins.includes(origin)) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    }
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
 };
 
 // Token verification middleware
