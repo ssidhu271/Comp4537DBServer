@@ -69,8 +69,8 @@ const corsMiddleware = (res) => {
 
 // Token verification middleware
 const verifyToken = (req, res) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const cookies = cookie.parse(req.headers.cookie || '');
+    const token = cookies.jwt; // Read the JWT from the cookie
 
     if (!token) {
         res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -197,9 +197,16 @@ initializeDatabase().then(() => {
                     res.end(JSON.stringify({ error: 'Invalid credentials' }));
                 } else {
                     const token = createToken(user);
-                    // Send token in response, don't set httpOnly cookie
+                     // Set the JWT as an HttpOnly cookie
+                    res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
+                        httpOnly: true,      // JavaScript cannot access the cookie
+                        secure: true,        // Only send cookie over HTTPS (use `false` for local testing)
+                        maxAge: 60 * 60,     // 1 hour in seconds
+                        sameSite: 'Strict',  // Helps prevent CSRF attacks
+                        path: '/',           // Makes cookie accessible with all requests to this server
+                    }));
                     res.writeHead(200, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ message: 'Login successful', token }));
+                    res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
         } else if (req.url === '/api/user-data' && req.method === 'GET') {
