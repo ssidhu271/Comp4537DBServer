@@ -24,8 +24,6 @@ function initializeDatabase() {
                     password_hash TEXT NOT NULL,
                     role TEXT DEFAULT 'user',
                     api_calls INTEGER DEFAULT 0,
-                    reset_code TEXT,
-                    reset_expires INTEGER
                 )
             `, (err) => {
                 if (err) {
@@ -33,6 +31,22 @@ function initializeDatabase() {
                     reject(err);
                     return;
                 }
+
+                db.run(`
+                    CREATE TABLE IF NOT EXISTS reset_codes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        reset_code TEXT NOT NULL,
+                        reset_expires INTEGER NOT NULL,
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                `, (err) => {
+                    if (err) {
+                        console.error("Error creating reset_codes table:", err.message);
+                        reject(err);
+                        return;
+                    }
+                });
 
                 // Check if the admin user exists and create one if not
                 const adminEmail = 'admin@admin.com';

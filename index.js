@@ -44,7 +44,7 @@ const transporter = nodemailer.createTransport({
 
   const sendResetCode = async (email, resetCode) => {
     const mailOptions = {
-      from: `"Your App Name" <${process.env.EMAIL_USER}>`, // Better to specify a name
+      from: `"Grey Dune" <${process.env.EMAIL_USER}>`, // Better to specify a name
       to: email,
       subject: 'Password Reset Code',
       text: `Your password reset code is: ${resetCode}`,
@@ -98,41 +98,53 @@ initializeDatabase().then(() => {
                 // Forgot Password - Step 1: Generate and send reset code
                 if (req.url === '/forgot-password' && req.method === 'POST') {
                     const { email } = await parseBody(req);
-        
+                
                     // Generate a reset code
                     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-                    
-                    // Store reset code in database (you may want to add a reset_code and reset_expires fields to your users table)
-                    db.run('UPDATE users SET reset_code = ?, reset_expires = ? WHERE email = ?', 
-                        [resetCode, Date.now() + 15 * 60 * 1000, email], (err) => { // 15-minute expiry
-                        if (err) {
-                            console.error('Database update error:', err);
+                    const expires = Date.now() + 15 * 60 * 1000; // 15-minute expiry
+                
+                    // Fetch user ID based on the email
+                    db.get('SELECT id FROM users WHERE email = ?', [email], (err, user) => {
+                        if (err || !user) {
+                            console.error('Database error or user not found:', err);
                             res.writeHead(500, { 'Content-Type': 'application/json' });
-                            return res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
+                            return res.end(JSON.stringify({ error: 'User not found' }));
                         }
-                        try {
-                            sendResetCode(email, resetCode);
-                            res.writeHead(200, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ message: 'Reset code sent to email' }));
-                        } catch (emailError) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            res.end(JSON.stringify({ error: 'Failed to send email' }));
-                        }
+                
+                        // Insert reset code into reset_codes table
+                        db.run(`
+                            INSERT INTO reset_codes (user_id, reset_code, reset_expires)
+                            VALUES (?, ?, ?)
+                        `, [user.id, resetCode, expires], (err) => {
+                            if (err) {
+                                console.error('Database insert error:', err);
+                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                return res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
+                            }
+                            try {
+                                sendResetCode(email, resetCode);
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ message: 'Reset code sent to email' }));
+                            } catch (emailError) {
+                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ error: 'Failed to send email' }));
+                            }
+                        });
                     });
                 }
-        
+                
                 // Forgot Password - Step 2: Verify reset code and reset password
                 else if (req.url === '/reset-password' && req.method === 'POST') {
                     const { email, resetCode, newPassword } = await parseBody(req);
                 
-                    db.get('SELECT reset_code, reset_expires FROM users WHERE email = ?', [email], (err, user) => {
-                        if (err) {
-                            console.error('Database error:', err);
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
-                            return res.end(JSON.stringify({ error: 'Database error' }));
-                        }
-                
-                        if (!user || user.reset_code !== resetCode || user.reset_expires < Date.now()) {
+                    // Retrieve user ID and reset code details
+                    db.get(`
+                        SELECT users.id AS user_id, reset_codes.reset_code, reset_codes.reset_expires
+                        FROM users
+                        JOIN reset_codes ON users.id = reset_codes.user_id
+                        WHERE users.email = ? AND reset_codes.reset_code = ?
+                    `, [email, resetCode], (err, data) => {
+                        if (err || !data || data.reset_expires < Date.now()) {
                             res.writeHead(400, { 'Content-Type': 'application/json' });
                             return res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
                         }
@@ -145,16 +157,23 @@ initializeDatabase().then(() => {
                                 return res.end(JSON.stringify({ error: 'Failed to hash password' }));
                             }
                 
-                            db.run('UPDATE users SET password_hash = ?, reset_code = NULL, reset_expires = NULL WHERE email = ?', 
-                                [hashedPassword, email], (updateErr) => {
+                            // Update the password and remove reset code entries
+                            db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, data.user_id], (updateErr) => {
                                 if (updateErr) {
                                     console.error('Database update error:', updateErr);
                                     res.writeHead(500, { 'Content-Type': 'application/json' });
-                                    res.end(JSON.stringify({ error: 'Failed to reset password' }));
-                                } else {
-                                    res.writeHead(200, { 'Content-Type': 'application/json' });
-                                    res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                                    return res.end(JSON.stringify({ error: 'Failed to reset password' }));
                                 }
+                
+                                // Delete the used reset code from reset_codes
+                                db.run('DELETE FROM reset_codes WHERE user_id = ?', [data.user_id], (deleteErr) => {
+                                    if (deleteErr) {
+                                        console.error('Failed to delete reset code:', deleteErr);
+                                    }
+                                });
+                
+                                res.writeHead(200, { 'Content-Type': 'application/json' });
+                                res.end(JSON.stringify({ message: 'Password reset successfully' }));
                             });
                         });
                     });
@@ -198,7 +217,8 @@ initializeDatabase().then(() => {
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({
                     api_calls: row.api_calls,
-                    message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit'
+                    message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit',
+                    status: userExceededLimit ? 'warning' : 'ok'
                 }));
             });
         } else if (req.url === '/api/admin-data' && req.method === 'GET') {
@@ -224,42 +244,7 @@ initializeDatabase().then(() => {
                     }
                 });
             });
-        }
-        
-        // else if (req.url.startsWith('/api/data') && req.method === 'GET') {
-        //     const user = verifyToken(req, res); // Use verifyToken to extract and verify the JWT
-        //     if (!user) return; // If token verification failed, verifyToken already handled the response
-        
-        //     db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
-        //         if (err || !row) {
-        //             res.writeHead(500, { 'Content-Type': 'application/json' });
-        //             res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
-        //             return;
-        //         }
-        
-        //         // If user is an admin, return all users' API call counts
-        //         if (row.role === 'admin') {
-        //             db.all('SELECT email, api_calls FROM users', (adminErr, allUsers) => {
-        //                 if (adminErr) {
-        //                     res.writeHead(500, { 'Content-Type': 'application/json' });
-        //                     res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
-        //                 } else {
-        //                     res.writeHead(200, { 'Content-Type': 'application/json' });
-        //                     res.end(JSON.stringify({ data: allUsers }));
-        //                 }
-        //             });
-        //         } else {
-        //             // Regular user: only show their own API call count
-        //             const userExceededLimit = row.api_calls >= 20;
-        //             res.writeHead(200, { 'Content-Type': 'application/json' });
-        //             res.end(JSON.stringify({
-        //                 api_calls: row.api_calls,
-        //                 message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit'
-        //             }));
-        //         }
-        //     });
-        // }
-         else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
+        } else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
             const token = req.headers['authorization'];
             if (!token) {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
