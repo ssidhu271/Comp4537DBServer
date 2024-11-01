@@ -86,21 +86,27 @@ const handleCors = (req, res) => {
     const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
     const origin = req.headers.origin;
     
-    if (origin === allowedOrigin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-    res.setHeader('Access-Control-Allow-Credentials', 'true'); // Necessary for cookies
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    const corsHeaders = {
+        'Access-Control-Allow-Origin': origin === allowedOrigin ? origin : '',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    };
 
     // Preflight handling
     if (req.method === 'OPTIONS') {
-        res.statusCode = 204;
+        res.writeHead(200, corsHeaders);
         res.end();
         return true;
+    } else {
+        // Set CORS headers for actual requests
+        Object.keys(corsHeaders).forEach((key) => {
+            res.setHeader(key, corsHeaders[key]);
+        });
     }
     return false;
 };
+
 
 // Initialize the database and start the server
 initializeDatabase().then(() => {
@@ -222,7 +228,7 @@ initializeDatabase().then(() => {
                     const token = createToken(user);
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,
-                        secure: false,
+                        secure: true,
                         sameSite: 'None', //change to None for cross-site cookies
                         path: '/',
                     }));
