@@ -203,7 +203,7 @@ initializeDatabase().then(() => {
                         httpOnly: true,      // JavaScript cannot access the cookie
                         secure: true,        // Only send cookie over HTTPS (use `false` for local testing)
                         maxAge: 60 * 60,     // 1 hour in seconds
-                        sameSite: 'Strict',  // Helps prevent CSRF attacks
+                        sameSite: 'None',  // Helps prevent CSRF attacks
                         path: '/',           // Makes cookie accessible with all requests to this server
                     }));
                     res.writeHead(200, { 'Content-Type': 'application/json'
