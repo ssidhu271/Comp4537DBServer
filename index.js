@@ -95,7 +95,7 @@ const handleCors = (req, res) => {
 
     // Preflight handling
     if (req.method === 'OPTIONS') {
-        res.writeHead(204); // No Content
+        res.statusCode = 204;
         res.end();
         return true;
     }
