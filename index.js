@@ -212,9 +212,8 @@ initializeDatabase().then(() => {
                 } else {
                     const token = createToken(user);
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
-                        httpOnly: false,
-                        secure: true,
-                        maxAge: 60 * 60,
+                        httpOnly: true,
+                        secure: false,
                         sameSite: 'None', //change to None for cross-site cookies
                         path: '/',
                     }));
