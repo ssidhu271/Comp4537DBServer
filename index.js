@@ -85,24 +85,21 @@ const verifyToken = (req, res) => {
 const handleCors = (req, res) => {
     const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
     const origin = req.headers.origin;
-    
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': origin === allowedOrigin ? origin : '',
-        'Access-Control-Allow-Credentials': 'true',
-        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    };
+
+    // Only set the Access-Control-Allow-Origin header if the origin is allowed
+    if (origin === allowedOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     // Preflight handling
     if (req.method === 'OPTIONS') {
-        res.writeHead(200, corsHeaders);
+        res.statusCode = 204; // No Content
         res.end();
         return true;
-    } else {
-        // Set CORS headers for actual requests
-        Object.keys(corsHeaders).forEach((key) => {
-            res.setHeader(key, corsHeaders[key]);
-        });
     }
     return false;
 };
@@ -234,6 +231,8 @@ initializeDatabase().then(() => {
                     }));
                     res.statusCode = 200;
                     res.setHeader('Content-Type', 'application/json');
+                    res.setHeader('Access-Control-Allow-Origin', origin);
+                    res.setHeader('Access-Control-Allow-Credentials', 'true'); 
                     res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
