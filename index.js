@@ -67,7 +67,7 @@ const verifyToken = (req, res) => {
     if (!token) {
         res.statusCode = 401;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'No token provided' }));
+        (JSON.stringify({ error: 'No token provided' }));
         return null;
     }
 
@@ -77,13 +77,13 @@ const verifyToken = (req, res) => {
         console.error('JWT verification error:', error);
         res.statusCode = 403;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Invalid token' }));
+        (JSON.stringify({ error: 'Invalid token' }));
         return null;
     }
 };
 
 const handleCors = (req, res) => {
-    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
+    const allowedOrigin = 'http://localhost:3000'; // Update with your frontend URL
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -103,6 +103,8 @@ initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
         handleCors(req, res);
 
+        if (req.method === 'OPTIONS') return;
+
         if (req.url === '/auth/validate' && req.method === 'GET') {
             // Parse cookies from the request headers
             const cookies = req.headers.cookie
@@ -114,30 +116,21 @@ initializeDatabase().then(() => {
         
             if (!token) {
               res.writeHead(401, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
-              return;
+              return res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
             }
         
             // Verify the JWT token
             jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
               if (err) {
                 res.writeHead(401, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
-                return;
+                return res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
               }
         
               // If valid, send back a positive response
               res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ authenticated: true }));
+              return res.end(JSON.stringify({ authenticated: true }));
             });
-          } else {
-            // Handle other routes as needed
-            res.writeHead(404, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ message: 'Not Found' }));
-          };
-
-        if (req.method === 'OPTIONS') return;
-            if (req.url === '/login' && req.method === 'POST') {
+          } else if (req.url === '/login' && req.method === 'POST') {
                 const { email, password } = await parseBody(req);
                 db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                     if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
@@ -154,7 +147,7 @@ initializeDatabase().then(() => {
                     }));
                     res.statusCode = 200;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ message: 'Login successful' }));
+                    return res.end(JSON.stringify({ message: 'Login successful' }));
                 });
             } else if (req.url == '/forgot-password' && req.method == 'POST') {
                     const { email } = await parseBody(req);
@@ -187,11 +180,11 @@ initializeDatabase().then(() => {
                                 sendResetCode(email, resetCode);
                                 res.statusCode = 200;
                                 res.setHeader('Content-Type', 'application/json');
-                                res.end(JSON.stringify({ message: 'Reset code sent to email' }));
+                                return res.end(JSON.stringify({ message: 'Reset code sent to email' }));
                             } catch (emailError) {
                                 res.statusCode = 500;
                                 res.setHeader('Content-Type', 'application/json');
-                                res.end(JSON.stringify({ error: 'Failed to send email' }));
+                                return res.end(JSON.stringify({ error: 'Failed to send email' }));
                             }
                         });
                     });
@@ -241,7 +234,7 @@ initializeDatabase().then(() => {
                 
                                 res.statusCode = 200;
                                 res.setHeader('Content-Type', 'application/json');
-                                res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                                return res.end(JSON.stringify({ message: 'Password reset successfully' }));
                             });
                         });
                     });
@@ -252,11 +245,11 @@ initializeDatabase().then(() => {
                 if (err) {
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'User registration failed' }));
+                    return res.end(JSON.stringify({ error: 'User registration failed' }));
                 } else {
                     res.statusCode = 201;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ message: 'User registered' }));
+                    return res.end(JSON.stringify({ message: 'User registered' }));
                 }
             });
         } else if (req.url == '/api/user-data' && req.method == 'GET') {
@@ -267,14 +260,13 @@ initializeDatabase().then(() => {
                 if (err || !row) {
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
-                    return;
+                    return res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
                 }
         
                 const userExceededLimit = row.api_calls >= 20;
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({
+                return res.end(JSON.stringify({
                     api_calls: row.api_calls,
                     message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit',
                     status: userExceededLimit ? 'warning' : 'ok'
@@ -289,8 +281,7 @@ initializeDatabase().then(() => {
                 if (err || !row || row.role !== 'admin') {
                     res.statusCode = 403;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Access denied' }));
-                    return;
+                    return res.end(JSON.stringify({ error: 'Access denied' }));
                 }
         
                 // Fetch all users' API calls if the user is an admin
@@ -298,11 +289,11 @@ initializeDatabase().then(() => {
                     if (adminErr) {
                         res.statusCode = 500;
                         res.setHeader('Content-Type', 'application/json');
-                        res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
+                        return res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
                     } else {
                         res.statusCode = 200;
                         res.setHeader('Content-Type', 'application/json');
-                        res.end(JSON.stringify({ data: allUsers }));
+                        return res.end(JSON.stringify({ data: allUsers }));
                     }
                 });
             });
@@ -314,8 +305,7 @@ initializeDatabase().then(() => {
                 if (err || !row) {
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
-                    return;
+                    return res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
                 }
         
                 // Only proceed to increment if the user has not exceeded 20 calls or is an admin
@@ -324,23 +314,23 @@ initializeDatabase().then(() => {
                         if (updateErr) {
                             res.statusCode = 500;
                             res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
+                            return res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
                         } else {
                             res.statusCode = 200;
                             res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ message: 'API call incremented successfully' }));
+                            return res.end(JSON.stringify({ message: 'API call incremented successfully' }));
                         }
                     });
                 } else {
                     res.statusCode = 403;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ warning: 'API call limit exceeded' }));
+                    return res.end(JSON.stringify({ warning: 'API call limit exceeded' }));
                 }
             });
         } else {
             res.statusCode = 404;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Route not found' }));
+            return res.end(JSON.stringify({ error: 'Route not found' }));
         }
     });
 
