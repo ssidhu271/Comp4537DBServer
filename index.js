@@ -60,12 +60,16 @@ const transporter = nodemailer.createTransport({
   };
 
 // Middleware to handle CORS and OPTIONS requests
-const corsMiddleware = (res) => {
-    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
+const corsMiddleware = (req, res) => {
+    const origin = req.headers.origin;
+    if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 };
+
 
 // Token verification middleware
 const verifyToken = (req, res) => {
@@ -73,7 +77,8 @@ const verifyToken = (req, res) => {
     const token = cookies.jwt; // Read the JWT from the cookie
 
     if (!token) {
-        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.statusCode = 401;
+        res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'No token provided' }));
         return null;
     }
@@ -82,7 +87,8 @@ const verifyToken = (req, res) => {
         return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
         console.error('JWT verification error:', error);
-        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.statusCode = 403;
+        res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'Invalid token' }));
         return null;
     }
@@ -91,9 +97,10 @@ const verifyToken = (req, res) => {
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        corsMiddleware(res);
+        corsMiddleware(req, res);
         if (req.method === 'OPTIONS') {
-            res.writeHead(200);
+            res.statusCode = 200;
+            res.setHeader('Content-Type', 'application/json');
             return res.end();
         }
                 // Forgot Password - Step 1: Generate and send reset code
