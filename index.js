@@ -68,6 +68,13 @@ const corsMiddleware = (req, res) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+        res.statusCode = 204;
+        res.end(); // End OPTIONS preflight request here
+        return true;
+    }
+    return false;
 };
 
 
