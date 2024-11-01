@@ -82,22 +82,31 @@ const verifyToken = (req, res) => {
     }
 };
 
+const handleCors = (req, res) => {
+    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
+    const origin = req.headers.origin;
+    
+    if (origin === allowedOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    res.setHeader('Access-Control-Allow-Credentials', 'true'); // Necessary for cookies
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    // Preflight handling
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204); // No Content
+        res.end();
+        return true;
+    }
+    return false;
+};
+
 // Initialize the database and start the server
 initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
-        const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
-        const origin = req.headers.origin;
-        if (origin === allowedOrigin) {
-            res.setHeader('Access-Control-Allow-Origin', origin);
-        }
-        res.setHeader('Access-Control-Allow-Credentials', 'true');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');   
-        // Handle OPTIONS preflight request
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            return res.end();
-        }        
+        if (handleCors(req, res)) return; // Exit if preflight
+      
                 // Forgot Password - Step 1: Generate and send reset code
                 if (req.url === '/forgot-password' && req.method === 'POST') {
                     const { email } = await parseBody(req);
