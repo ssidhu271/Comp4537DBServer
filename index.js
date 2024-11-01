@@ -108,7 +108,8 @@ initializeDatabase().then(() => {
                     db.get('SELECT id FROM users WHERE email = ?', [email], (err, user) => {
                         if (err || !user) {
                             console.error('Database error or user not found:', err);
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
                             return res.end(JSON.stringify({ error: 'User not found' }));
                         }
                 
@@ -119,7 +120,8 @@ initializeDatabase().then(() => {
                         `, [user.id, resetCode, expires], (err) => {
                             if (err) {
                                 console.error('Database insert error:', err);
-                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
                                 return res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
                             }
                             try {
@@ -128,7 +130,8 @@ initializeDatabase().then(() => {
                                 res.setHeader('Content-Type', 'application/json');
                                 res.end(JSON.stringify({ message: 'Reset code sent to email' }));
                             } catch (emailError) {
-                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
                                 res.end(JSON.stringify({ error: 'Failed to send email' }));
                             }
                         });
@@ -147,7 +150,8 @@ initializeDatabase().then(() => {
                         WHERE users.email = ? AND reset_codes.reset_code = ?
                     `, [email, resetCode], (err, data) => {
                         if (err || !data || data.reset_expires < Date.now()) {
-                            res.writeHead(400, { 'Content-Type': 'application/json' });
+                            res.statusCode = 400;
+                            res.setHeader('Content-Type', 'application/json');
                             return res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
                         }
                 
@@ -155,7 +159,8 @@ initializeDatabase().then(() => {
                         bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
                             if (hashErr) {
                                 console.error('Hashing error:', hashErr);
-                                res.writeHead(500, { 'Content-Type': 'application/json' });
+                                res.statusCode = 500;
+                                res.setHeader('Content-Type', 'application/json');
                                 return res.end(JSON.stringify({ error: 'Failed to hash password' }));
                             }
                 
@@ -163,7 +168,8 @@ initializeDatabase().then(() => {
                             db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, data.user_id], (updateErr) => {
                                 if (updateErr) {
                                     console.error('Database update error:', updateErr);
-                                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                                    res.statusCode = 500;
+                                    res.setHeader('Content-Type', 'application/json');
                                     return res.end(JSON.stringify({ error: 'Failed to reset password' }));
                                 }
                 
@@ -185,10 +191,12 @@ initializeDatabase().then(() => {
             const hashedPassword = await bcrypt.hash(password, 10);
             db.run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hashedPassword, role || 'user'], (err) => {
                 if (err) {
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'User registration failed' }));
                 } else {
-                    res.writeHead(201, { 'Content-Type': 'application/json' });
+                    res.statusCode = 201;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ message: 'User registered' }));
                 }
             });
@@ -196,7 +204,8 @@ initializeDatabase().then(() => {
             const { email, password } = await parseBody(req);
             db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                 if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
-                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    res.statusCode = 401;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Invalid credentials' }));
                 } else {
                     const token = createToken(user);
@@ -207,8 +216,8 @@ initializeDatabase().then(() => {
                         sameSite: 'None',  // Helps prevent CSRF attacks
                         path: '/',           // Makes cookie accessible with all requests to this server
                     }));
-                    res.writeHead(200, { 'Content-Type': 'application/json'
-                     });
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
@@ -218,7 +227,8 @@ initializeDatabase().then(() => {
         
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row) {
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
                     return;
                 }
@@ -239,7 +249,8 @@ initializeDatabase().then(() => {
             // Check if user is an admin
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row || row.role !== 'admin') {
-                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.statusCode = 403;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Access denied' }));
                     return;
                 }
@@ -247,7 +258,8 @@ initializeDatabase().then(() => {
                 // Fetch all users' API calls if the user is an admin
                 db.all('SELECT email, api_calls FROM users', (adminErr, allUsers) => {
                     if (adminErr) {
-                        res.writeHead(500, { 'Content-Type': 'application/json' });
+                        res.statusCode = 500;
+                        res.setHeader('Content-Type', 'application/json');
                         res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
                     } else {
                         res.statusCode = 200;
@@ -262,7 +274,8 @@ initializeDatabase().then(() => {
         
             db.get('SELECT * FROM users WHERE id = ?', [user.id], (err, row) => {
                 if (err || !row) {
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
                     return;
                 }
@@ -271,7 +284,8 @@ initializeDatabase().then(() => {
                 if (row.api_calls < 20 || row.role === 'admin') {
                     db.run('UPDATE users SET api_calls = api_calls + 1 WHERE id = ?', [user.id], (updateErr) => {
                         if (updateErr) {
-                            res.writeHead(500, { 'Content-Type': 'application/json' });
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
                             res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
                         } else {
                             res.statusCode = 200;
@@ -280,12 +294,14 @@ initializeDatabase().then(() => {
                         }
                     });
                 } else {
-                    res.writeHead(403, { 'Content-Type': 'application/json' });
+                    res.statusCode = 403;
+                    res.setHeader('Content-Type', 'application/json');
                     res.end(JSON.stringify({ warning: 'API call limit exceeded' }));
                 }
             });
         } else {
-            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.statusCode = 404;
+            res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: 'Route not found' }));
         }
     });
