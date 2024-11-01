@@ -83,7 +83,7 @@ const verifyToken = (req, res) => {
 };
 
 const handleCors = (req, res) => {
-    const allowedOrigin = 'http://localhost:3000'; // Update with your frontend URL
+    const allowedOrigin = 'http://https://gray-dune-0c3966f1e.5.azurestaticapps.net/'; // Update with your frontend URL
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
