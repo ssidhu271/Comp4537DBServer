@@ -197,7 +197,6 @@ initializeDatabase().then(() => {
                     res.end(JSON.stringify({ error: 'Invalid credentials' }));
                 } else {
                     const token = createToken(user);
-                     // Set the JWT as an HttpOnly cookie
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,      // JavaScript cannot access the cookie
                         secure: true,        // Only send cookie over HTTPS (use `false` for local testing)
@@ -205,8 +204,7 @@ initializeDatabase().then(() => {
                         sameSite: 'Strict',  // Helps prevent CSRF attacks
                         path: '/',           // Makes cookie accessible with all requests to this server
                     }));
-                    res.writeHead(200, { 'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*', // Allow all origins
+                    res.writeHead(200, { 'Content-Type': 'application/json'
                      });
                     res.end(JSON.stringify({ message: 'Login successful'}));
                 }
