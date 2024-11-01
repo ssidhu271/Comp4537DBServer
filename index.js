@@ -83,20 +83,13 @@ const verifyToken = (req, res) => {
 };
 
 const handleCors = (req, res) => {
-    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net';
-    const origin = req.headers.origin;
-
-    // Only set the Access-Control-Allow-Origin header if the origin is allowed
-    if (origin === allowedOrigin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-    }
-
+    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     // Preflight handling
-    if (req.method === 'OPTIONS') {
+    if (req.method == 'OPTIONS') {
         res.statusCode = 204; // No Content
         res.end();
         return true;
@@ -111,7 +104,7 @@ initializeDatabase().then(() => {
         if (handleCors(req, res)) return; // Exit if preflight
       
                 // Forgot Password - Step 1: Generate and send reset code
-                if (req.url === '/forgot-password' && req.method === 'POST') {
+                if (req.url == '/forgot-password' && req.method == 'POST') {
                     const { email } = await parseBody(req);
                 
                     // Generate a reset code
@@ -153,7 +146,7 @@ initializeDatabase().then(() => {
                 }
                 
                 // Forgot Password - Step 2: Verify reset code and reset password
-                else if (req.url === '/reset-password' && req.method === 'POST') {
+                else if (req.url == '/reset-password' && req.method == 'POST') {
                     const { email, resetCode, newPassword } = await parseBody(req);
                 
                     // Retrieve user ID and reset code details
@@ -200,7 +193,7 @@ initializeDatabase().then(() => {
                             });
                         });
                     });
-                } else if (req.url === '/register' && req.method === 'POST') {
+                } else if (req.url == '/register' && req.method == 'POST') {
             const { email, password, role } = await parseBody(req);
             const hashedPassword = await bcrypt.hash(password, 10);
             db.run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hashedPassword, role || 'user'], (err) => {
@@ -214,12 +207,14 @@ initializeDatabase().then(() => {
                     res.end(JSON.stringify({ message: 'User registered' }));
                 }
             });
-        } else if (req.url === '/login' && req.method === 'POST') {
+        } else if (req.url == '/login' && req.method == 'POST') {
             const { email, password } = await parseBody(req);
             db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                 if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
                     res.statusCode = 401;
                     res.setHeader('Content-Type', 'application/json');
+                    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
+                    res.setHeader('Access-Control-Allow-Credentials', 'true'); 
                     res.end(JSON.stringify({ error: 'Invalid credentials' }));
                 } else {
                     const token = createToken(user);
@@ -231,12 +226,12 @@ initializeDatabase().then(() => {
                     }));
                     res.statusCode = 200;
                     res.setHeader('Content-Type', 'application/json');
-                    res.setHeader('Access-Control-Allow-Origin', origin);
+                    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net');
                     res.setHeader('Access-Control-Allow-Credentials', 'true'); 
                     res.end(JSON.stringify({ message: 'Login successful'}));
                 }
             });
-        } else if (req.url === '/api/user-data' && req.method === 'GET') {
+        } else if (req.url == '/api/user-data' && req.method == 'GET') {
             const user = verifyToken(req, res);
             if (!user) return; // Token verification failed; response handled by verifyToken
         
@@ -257,7 +252,7 @@ initializeDatabase().then(() => {
                     status: userExceededLimit ? 'warning' : 'ok'
                 }));
             });
-        } else if (req.url === '/api/admin-data' && req.method === 'GET') {
+        } else if (req.url == '/api/admin-data' && req.method == 'GET') {
             const user = verifyToken(req, res);
             if (!user) return;
         
@@ -283,7 +278,7 @@ initializeDatabase().then(() => {
                     }
                 });
             });
-        } else if (req.url === '/api/increment-api-call' && req.method === 'POST') {
+        } else if (req.url == '/api/increment-api-call' && req.method == 'POST') {
             const user = verifyToken(req, res);
             if (!user) return;
         
@@ -296,7 +291,7 @@ initializeDatabase().then(() => {
                 }
         
                 // Only proceed to increment if the user has not exceeded 20 calls or is an admin
-                if (row.api_calls < 20 || row.role === 'admin') {
+                if (row.api_calls < 20 || row.role == 'admin') {
                     db.run('UPDATE users SET api_calls = api_calls + 1 WHERE id = ?', [user.id], (updateErr) => {
                         if (updateErr) {
                             res.statusCode = 500;
