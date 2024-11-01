@@ -61,9 +61,7 @@ const transporter = nodemailer.createTransport({
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (req, res) => {
-    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net/'; // Update with your frontend URL
-
-    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Access-Control-Allow-Origin', 'https://gray-dune-0c3966f1e.5.azurestaticapps.net/');
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -83,6 +81,7 @@ const verifyToken = (req, res) => {
     try {
         return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
+        console.error('JWT verification error:', error);
         res.writeHead(403, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Invalid token' }));
         return null;
