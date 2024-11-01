@@ -142,7 +142,7 @@ initializeDatabase().then(() => {
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,
                         secure: true,
-                        sameSite: 'None',
+                        sameSite: 'Lax',
                         path: '/',
                     }));
                     res.statusCode = 200;
