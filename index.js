@@ -103,6 +103,39 @@ initializeDatabase().then(() => {
     const server = http.createServer(async (req, res) => {
         handleCors(req, res);
 
+        if (req.url === '/auth/validate' && req.method === 'GET') {
+            // Parse cookies from the request headers
+            const cookies = req.headers.cookie
+              ?.split(';')
+              .map(cookie => cookie.trim().split('='))
+              .reduce((acc, [key, value]) => ({ ...acc, [key]: decodeURIComponent(value) }), {});
+        
+            const token = cookies?.jwt; // Get JWT from HttpOnly cookie
+        
+            if (!token) {
+              res.writeHead(401, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
+              return;
+            }
+        
+            // Verify the JWT token
+            jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+              if (err) {
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
+                return;
+              }
+        
+              // If valid, send back a positive response
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ authenticated: true }));
+            });
+          } else {
+            // Handle other routes as needed
+            res.writeHead(404, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Not Found' }));
+          };
+
         if (req.method === 'OPTIONS') return;
             if (req.url === '/login' && req.method === 'POST') {
                 const { email, password } = await parseBody(req);
