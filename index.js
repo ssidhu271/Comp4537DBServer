@@ -61,7 +61,7 @@ const transporter = nodemailer.createTransport({
 
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (req, res) => {
-    const allowedOrigin = '*'; // Update with your frontend URL
+    const allowedOrigin = 'https://gray-dune-0c3966f1e.5.azurestaticapps.net/'; // Update with your frontend URL
 
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -201,7 +201,7 @@ initializeDatabase().then(() => {
                     const token = createToken(user);
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,      // JavaScript cannot access the cookie
-                        secure: false,        // Only send cookie over HTTPS (use `false` for local testing)
+                        secure: true,        // Only send cookie over HTTPS (use `false` for local testing)
                         maxAge: 60 * 60,     // 1 hour in seconds
                         sameSite: 'None',  // Helps prevent CSRF attacks
                         path: '/',           // Makes cookie accessible with all requests to this server
