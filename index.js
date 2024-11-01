@@ -191,6 +191,7 @@ initializeDatabase().then(() => {
                 }
             });
         } else if (req.url === '/login' && req.method === 'POST') {
+            setCORSHeaders(res);  // Set CORS headers here as well
             const { email, password } = await parseBody(req);
             db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                 if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
