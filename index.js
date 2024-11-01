@@ -62,15 +62,15 @@ const transporter = nodemailer.createTransport({
 // Middleware to handle CORS and OPTIONS requests
 const corsMiddleware = (req, res) => {
     const origin = req.headers.origin;
-    if (origin) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
+    if (origin && origin.includes('localhost')) {
+        res.setHeader('Access-Control-Allow-Origin', origin); // Allow only localhost for testing
     }
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') {
-        res.statusCode = 204;
+        res.writeHead(204);
         res.end(); // End OPTIONS preflight request here
         return true;
     }
@@ -224,11 +224,11 @@ initializeDatabase().then(() => {
                 } else {
                     const token = createToken(user);
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
-                        httpOnly: true,      // JavaScript cannot access the cookie
-                        secure: true,        // Only send cookie over HTTPS (use `false` for local testing)
-                        maxAge: 60 * 60,     // 1 hour in seconds
-                        sameSite: 'None',  // Helps prevent CSRF attacks
-                        path: '/',           // Makes cookie accessible with all requests to this server
+                        httpOnly: true,
+                        secure: true,
+                        maxAge: 60 * 60,
+                        sameSite: 'Lax', //change to None for cross-site cookies
+                        path: '/',
                     }));
                     res.statusCode = 200;
                     res.setHeader('Content-Type', 'application/json');
