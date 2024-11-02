@@ -112,38 +112,21 @@ initializeDatabase().then(() => {
               .map(cookie => cookie.trim().split('='))
               .reduce((acc, [key, value]) => ({ ...acc, [key]: decodeURIComponent(value) }), {});
         
-            const token = cookies?.jwt; // Get JWT from HttpOnly cookie
+            const token = cookies?.jwt;
         
             if (!token) {
-              res.writeHead(401, { 'Content-Type': 'application/json' });
-              return res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
+                res.writeHead(401, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
             }
         
             // Verify the JWT token
             jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-              if (err) {
-                res.writeHead(401, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
-              }
-        
-                  // If the role is included in the JWT, use it directly; otherwise, fetch it from the database
-            if (decoded.role) {
+                if (err) {
+                    res.writeHead(401, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
+                }
                 res.writeHead(200, { 'Content-Type': 'application/json' });
                 return res.end(JSON.stringify({ authenticated: true, role: decoded.role }));
-            } else {
-                // Fetch the role from the database synchronously
-                db.get('SELECT role FROM users WHERE id = ?', [decoded.id], (dbErr, row) => {
-                if (dbErr) {
-                    console.error("Error fetching user role:", dbErr);
-                    res.writeHead(500, { 'Content-Type': 'application/json' });
-                    return res.end(JSON.stringify({ authenticated: false, message: 'Failed to retrieve role' }));
-                }
-        
-                const userRole = row ? row.role : 'user'; // Default to 'user' if no role found
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                return res.end(JSON.stringify({ authenticated: true, role: userRole }));
-                });
-            }
             });
         } else if (req.url === '/login' && req.method === 'POST') {
                 const { email, password } = await parseBody(req);
@@ -153,7 +136,7 @@ initializeDatabase().then(() => {
                         res.setHeader('Content-Type', 'application/json');
                         return res.end(JSON.stringify({ error: 'Invalid credentials' }));
                     }
-                    const token = createToken(user);
+                    const token = createToken({ id: user.id, role: user.role });
                     res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
                         httpOnly: true,
                         secure: true,
