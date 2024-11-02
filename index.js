@@ -126,11 +126,26 @@ initializeDatabase().then(() => {
                 return res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
               }
         
-              // If valid, send back a positive response
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              return res.end(JSON.stringify({ authenticated: true }));
+                  // If the role is included in the JWT, use it directly; otherwise, fetch it from the database
+            if (decoded.role) {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ authenticated: true, role: decoded.role }));
+            } else {
+                // Fetch the role from the database synchronously
+                db.get('SELECT role FROM users WHERE id = ?', [decoded.id], (dbErr, row) => {
+                if (dbErr) {
+                    console.error("Error fetching user role:", dbErr);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    return res.end(JSON.stringify({ authenticated: false, message: 'Failed to retrieve role' }));
+                }
+        
+                const userRole = row ? row.role : 'user'; // Default to 'user' if no role found
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                return res.end(JSON.stringify({ authenticated: true, role: userRole }));
+                });
+            }
             });
-          } else if (req.url === '/login' && req.method === 'POST') {
+        } else if (req.url === '/login' && req.method === 'POST') {
                 const { email, password } = await parseBody(req);
                 db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
                     if (err || !user || !(await bcrypt.compare(password, user.password_hash))) {
