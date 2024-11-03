@@ -1,8 +1,9 @@
+//ChatGPT helped with the creation of this file
+
 require('dotenv').config();
-const { db, queries } = require('./utils/dbHelper'); // Import the shared db instance
+const { db, queries } = require('./utils/dbHelper');
 const bcrypt = require('bcryptjs');
 
-// Function to initialize the database
 function initializeDatabase() {
     return new Promise((resolve, reject) => {
         db.serialize(() => {

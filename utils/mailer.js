@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 

@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const { db, getQuery } = require('../utils/dbHelper');
 
 const getUserData = async (req, res, user) => {

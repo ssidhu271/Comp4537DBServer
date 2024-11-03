@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const { allQuery, getQuery, runQuery } = require('../utils/dbHelper'); // Use the helper functions
 
 // Function to retrieve admin data

@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const bcrypt = require('bcryptjs');
 const parseBody = require('../utils/parseBody');
 const jwt = require('jsonwebtoken');
@@ -37,13 +39,11 @@ const login = async (req, res) => {
         }
     };
 
-// Register function
 const register = async (req, res) => {
     try {
-        const { email, password, role } = await parseBody(req); // Parse body here
+        const { email, password, role } = await parseBody(req);
         const hashedPassword = await bcrypt.hash(password, 10);
         
-        // Use runQuery to insert the user
         await runQuery('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hashedPassword, role || 'user']);
         
         res.statusCode = 201;
@@ -57,22 +57,18 @@ const register = async (req, res) => {
     }
 };
 
-// Forgot Password - Step 1: Generate and send reset code
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
 
-    // Generate a reset code
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const expires = Date.now() + 15 * 60 * 1000; // 15-minute expiry
+    const expires = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-    // Fetch user ID based on the email
     db.get('SELECT id FROM users WHERE email = ?', [email], (err, user) => {
         if (err || !user) {
             console.error('Database error or user not found:', err);
             return res.status(500).json({ error: 'User not found' });
         }
 
-        // Insert reset code into reset_codes table
         db.run(`
             INSERT INTO reset_codes (user_id, reset_code, reset_expires)
             VALUES (?, ?, ?)
@@ -91,11 +87,9 @@ const forgotPassword = async (req, res) => {
     });
 };
 
-// Forgot Password - Step 2: Verify reset code and reset password
 const resetPassword = async (req, res) => {
     const { email, resetCode, newPassword } = req.body;
 
-    // Retrieve user ID and reset code details
     db.get(`
         SELECT users.id AS user_id, reset_codes.reset_code, reset_codes.reset_expires
         FROM users
@@ -106,21 +100,18 @@ const resetPassword = async (req, res) => {
             return res.status(400).json({ error: 'Invalid or expired reset code' });
         }
 
-        // Reset the password
         bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
             if (hashErr) {
                 console.error('Hashing error:', hashErr);
                 return res.status(500).json({ error: 'Failed to hash password' });
             }
 
-            // Update the password and remove reset code entries
             db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, data.user_id], (updateErr) => {
                 if (updateErr) {
                     console.error('Database update error:', updateErr);
                     return res.status(500).json({ error: 'Failed to reset password' });
                 }
 
-                // Delete the used reset code from reset_codes
                 db.run('DELETE FROM reset_codes WHERE user_id = ?', [data.user_id], (deleteErr) => {
                     if (deleteErr) {
                         console.error('Failed to delete reset code:', deleteErr);
@@ -134,7 +125,6 @@ const resetPassword = async (req, res) => {
 };
 
 const validateToken = (req, res) => {
-    // Parse cookies from the request headers
     const cookies = req.headers.cookie
         ?.split(';')
         .map(cookie => cookie.trim().split('='))
@@ -147,7 +137,6 @@ const validateToken = (req, res) => {
         return res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
     }
 
-    // Verify the JWT token
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
         if (err) {
             res.writeHead(401, { 'Content-Type': 'application/json' });
@@ -158,5 +147,4 @@ const validateToken = (req, res) => {
     });
 };
 
-// Export the functions
 module.exports = { login, register, forgotPassword, resetPassword, validateToken };
