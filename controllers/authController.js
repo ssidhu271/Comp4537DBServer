@@ -23,9 +23,9 @@ const login = async (req, res) => {
 
             const token = jwtHelper.createToken({ id: user.id, role: user.role });
             res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
-                httpOnly: false,
-                secure: false,
-                sameSite: 'Lax',
+                httpOnly: true,
+                secure: true,
+                sameSite: 'None',
                 path: '/',
             }));
             res.statusCode = 200;
