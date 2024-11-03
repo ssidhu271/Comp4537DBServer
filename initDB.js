@@ -1,82 +1,60 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+require('dotenv').config();
+const { db, queries } = require('./utils/dbHelper'); // Import the shared db instance
 const bcrypt = require('bcryptjs');
-
-// Define the database file location
-const dbPath = path.resolve(__dirname, 'myApp.db');
 
 // Function to initialize the database
 function initializeDatabase() {
     return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                console.error("Error opening database:", err.message);
-                reject(err);
-                return;
-            }
+        db.serialize(() => {
             console.log("Connected to SQLite database.");
 
-            // Create the users table if it doesn't exist
-            db.run(`
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    email TEXT UNIQUE NOT NULL,
-                    password_hash TEXT NOT NULL,
-                    role TEXT DEFAULT 'user',
-                    api_calls INTEGER DEFAULT 0
-                )
-            `, (err) => {
+            // Create the users table
+            db.run(queries.createUsersTable, (err) => {
                 if (err) {
-                    console.error("Error creating table:", err.message);
+                    console.error("Error creating users table:", err.message);
                     reject(err);
                     return;
                 }
 
-                db.run(`
-                    CREATE TABLE IF NOT EXISTS reset_codes (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        user_id INTEGER NOT NULL,
-                        reset_code TEXT NOT NULL,
-                        reset_expires INTEGER NOT NULL,
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                    )
-                `, (err) => {
+                // Create the reset_codes table
+                db.run(queries.createResetCodesTable, async (err) => {
                     if (err) {
                         console.error("Error creating reset_codes table:", err.message);
                         reject(err);
                         return;
                     }
-                });
 
-                // Check if the admin user exists and create one if not
-                const adminEmail = 'admin@admin.com';
-                const adminPassword = '111';
-                db.get("SELECT * FROM users WHERE email = ?", [adminEmail], async (err, row) => {
-                    if (err) {
-                        console.error("Error querying admin user:", err.message);
-                        reject(err);
-                        return;
-                    }
+                    // Check if the admin user exists
+                    const adminEmail = process.env.ADMIN_EMAIL;
+                    const adminPassword = process.env.ADMIN_PASSWORD;
+                    db.get(queries.checkAdminExists, [adminEmail], async (err, row) => {
+                        if (err) {
+                            console.error("Error querying admin user:", err.message);
+                            reject(err);
+                            return;
+                        }
 
-                    if (!row) {
-                        // Hash the admin password and insert the admin user
-                        const hashedPassword = await bcrypt.hash(adminPassword, 10);
-                        db.run(`
-                            INSERT INTO users (email, password_hash, role)
-                            VALUES (?, ?, 'admin')
-                        `, [adminEmail, hashedPassword], (err) => {
-                            if (err) {
-                                console.error("Error creating admin user:", err.message);
-                                reject(err);
-                            } else {
-                                console.log("Admin user created with email 'admin@admin.com'.");
-                                resolve();
+                        if (!row) {
+                            try {
+                                const hashedPassword = await bcrypt.hash(adminPassword, 10);
+                                db.run(queries.insertAdminUser, [adminEmail, hashedPassword], (err) => {
+                                    if (err) {
+                                        console.error("Error creating admin user:", err.message);
+                                        reject(err);
+                                    } else {
+                                        console.log("Admin user created with email 'admin@admin.com'.");
+                                        resolve();
+                                    }
+                                });
+                            } catch (hashError) {
+                                console.error("Error hashing admin password:", hashError.message);
+                                reject(hashError);
                             }
-                        });
-                    } else {
-                        console.log("Admin user already exists.");
-                        resolve();
-                    }
+                        } else {
+                            console.log("Admin user already exists.");
+                            resolve();
+                        }
+                    });
                 });
             });
         });
