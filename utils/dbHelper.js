@@ -1,11 +1,11 @@
+//ChatGPT helped with the creation of this file
+
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Define the path to your database
 const dbPath = path.resolve(__dirname, '../myApp.db');
 const db = new sqlite3.Database(dbPath);
 
-// SQL Queries
 const queries = {
     createUsersTable: `
         CREATE TABLE IF NOT EXISTS users (

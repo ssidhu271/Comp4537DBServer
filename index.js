@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const http = require('http');
 const { parse } = require('url');
 const initializeDatabase = require('./initDB'); 

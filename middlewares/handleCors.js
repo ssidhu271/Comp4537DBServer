@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const handleCors = (req, res) => {
     const allowedOrigin = 'https://happy-island-03f35251e.5.azurestaticapps.net';
     res.setHeader('Access-Control-Allow-Origin', allowedOrigin);

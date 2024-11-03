@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const jwt = require('jsonwebtoken');
 const cookie = require('cookie');
 require('dotenv').config();
