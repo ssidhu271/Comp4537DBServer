@@ -58,70 +58,101 @@ const register = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
-    const { email } = req.body;
+    const { email } = await parseBody(req);
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const expires = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-    db.get('SELECT id FROM users WHERE email = ?', [email], (err, user) => {
+    db.get('SELECT id FROM users WHERE email = ?', [email], async (err, user) => {
         if (err || !user) {
             console.error('Database error or user not found:', err);
-            return res.status(500).json({ error: 'User not found' });
+            res.statusCode = 500;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'User not found' }));
+            return;
         }
 
-        db.run(`
-            INSERT INTO reset_codes (user_id, reset_code, reset_expires)
-            VALUES (?, ?, ?)
-        `, [user.id, resetCode, expires], async (err) => {
-            if (err) {
-                console.error('Database insert error:', err);
-                return res.status(500).json({ error: 'Failed to generate reset code' });
+        db.run(
+            `INSERT INTO reset_codes (user_id, reset_code, reset_expires) VALUES (?, ?, ?)`,
+            [user.id, resetCode, expires],
+            async (err) => {
+                if (err) {
+                    console.error('Database insert error:', err);
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
+                    return;
+                }
+                try {
+                    await sendResetCode(email, resetCode);
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ message: 'Reset code sent to email' }));
+                } catch (emailError) {
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Failed to send email' }));
+                }
             }
-            try {
-                await sendResetCode(email, resetCode);
-                res.status(200).json({ message: 'Reset code sent to email' });
-            } catch (emailError) {
-                res.status(500).json({ error: 'Failed to send email' });
-            }
-        });
+        );
     });
 };
 
 const resetPassword = async (req, res) => {
-    const { email, resetCode, newPassword } = req.body;
+    const { email, resetCode, newPassword } = await parseBody(req);
 
-    db.get(`
+    db.get(
+        `
         SELECT users.id AS user_id, reset_codes.reset_code, reset_codes.reset_expires
         FROM users
         JOIN reset_codes ON users.id = reset_codes.user_id
         WHERE users.email = ? AND reset_codes.reset_code = ?
-    `, [email, resetCode], (err, data) => {
-        if (err || !data || data.reset_expires < Date.now()) {
-            return res.status(400).json({ error: 'Invalid or expired reset code' });
-        }
-
-        bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
-            if (hashErr) {
-                console.error('Hashing error:', hashErr);
-                return res.status(500).json({ error: 'Failed to hash password' });
+    `,
+        [email, resetCode],
+        (err, data) => {
+            if (err || !data || data.reset_expires < Date.now()) {
+                console.error('Invalid or expired reset code:', err);
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
+                return;
             }
 
-            db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, data.user_id], (updateErr) => {
-                if (updateErr) {
-                    console.error('Database update error:', updateErr);
-                    return res.status(500).json({ error: 'Failed to reset password' });
+            bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
+                if (hashErr) {
+                    console.error('Hashing error:', hashErr);
+                    res.statusCode = 500;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify({ error: 'Failed to hash password' }));
+                    return;
                 }
 
-                db.run('DELETE FROM reset_codes WHERE user_id = ?', [data.user_id], (deleteErr) => {
-                    if (deleteErr) {
-                        console.error('Failed to delete reset code:', deleteErr);
-                    }
-                });
+                db.run(
+                    'UPDATE users SET password_hash = ? WHERE id = ?',
+                    [hashedPassword, data.user_id],
+                    (updateErr) => {
+                        if (updateErr) {
+                            console.error('Database update error:', updateErr);
+                            res.statusCode = 500;
+                            res.setHeader('Content-Type', 'application/json');
+                            res.end(JSON.stringify({ error: 'Failed to reset password' }));
+                            return;
+                        }
 
-                res.status(200).json({ message: 'Password reset successfully' });
+                        db.run('DELETE FROM reset_codes WHERE user_id = ?', [data.user_id], (deleteErr) => {
+                            if (deleteErr) {
+                                console.error('Failed to delete reset code:', deleteErr);
+                            }
+                        });
+
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                    }
+                );
             });
-        });
-    });
+        }
+    );
 };
 
 const validateToken = (req, res) => {
