@@ -6,6 +6,7 @@ const initializeDatabase = require('./initDB');
 const { login, register, forgotPassword, resetPassword, validateToken } = require('./controllers/authController');
 const { getAdminData, incrementApiCall } = require('./controllers/apiController');
 const { getUserData } = require('./controllers/userController');
+const { addWavFile, getWavFilesByUser, updateWavFileName, deleteWavFile } = require('./controllers/wavController');
 const handleCors = require('./middlewares/handleCors');
 const verifyToken = require('./middlewares/verifyToken');
 require('dotenv').config();
@@ -17,7 +18,7 @@ initializeDatabase().then(() => {
         handleCors(req, res);
         if (req.method === 'OPTIONS') return;
 
-        const { pathname } = parse(req.url, true);
+        const { pathname, query } = parse(req.url, true);
 
         if (pathname === '/auth/validate' && req.method === 'GET') {
             validateToken(req, res);
@@ -35,6 +36,17 @@ initializeDatabase().then(() => {
             verifyToken(req, res, () => getAdminData(req, res, req.user));
         } else if (pathname === '/api/increment-api-call' && req.method === 'POST') {
             verifyToken(req, res, () => incrementApiCall(req, res, req.user));
+        } else if (pathname === '/wav-files' && req.method === 'POST') {
+            verifyToken(req, res, () => addWavFile(req, res));
+        } else if (pathname === '/wav-files' && req.method === 'GET') {
+            const userId = query.userId;
+            verifyToken(req, res, () => getWavFilesByUser(req, res, userId));
+        } else if (pathname.startsWith('/wav-files/') && req.method === 'PUT') {
+            const id = pathname.split('/').pop();
+            verifyToken(req, res, () => updateWavFileName(req, res, id));
+        } else if (pathname.startsWith('/wav-files/') && req.method === 'DELETE') {
+            const id = pathname.split('/').pop();
+            verifyToken(req, res, () => deleteWavFile(req, res, id));
         } else {
             res.statusCode = 404;
             res.setHeader('Content-Type', 'application/json');
