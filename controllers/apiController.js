@@ -4,6 +4,8 @@ const { allQuery, getQuery, runQuery } = require('../utils/dbHelper'); // Use th
 
 // Function to retrieve admin data
 const getAdminData = async (req, res) => {
+    incrementApiUsage('/api/admin-data', 'GET');
+
     const user = req.user;
     if (user.role !== 'admin') {
         res.statusCode = 403;
@@ -56,4 +58,56 @@ const incrementApiCall = async (req, res) => {
     }
 };
 
-module.exports = { getAdminData, incrementApiCall };
+const incrementApiUsage = async (endpoint, method) => {
+    try {
+        // Check if the endpoint-method combination already exists
+        const existingLog = await getQuery(
+            'SELECT * FROM api_usage_logs WHERE endpoint = ? AND method = ?',
+            [endpoint, method]
+        );
+
+        if (existingLog) {
+            // If the record exists, update the request count
+            await runQuery(
+                'UPDATE api_usage_logs SET request_count = request_count + 1 WHERE endpoint = ? AND method = ?',
+                [endpoint, method]
+            );
+        } else {
+            // If the record doesn't exist, insert a new one
+            await runQuery(
+                'INSERT INTO api_usage_logs (endpoint, method, request_count) VALUES (?, ?, 1)',
+                [endpoint, method]
+            );
+        }
+    } catch (error) {
+        console.error("Error incrementing API usage:", error);
+    }
+};
+
+const getApiUsageStats = async (req, res) => {
+    const user = req.user;
+    if (user.role !== 'admin') {
+        res.statusCode = 403;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ error: 'Access denied' }));
+    }
+
+    try {
+        const stats = await allQuery(`
+            SELECT endpoint, method, request_count
+            FROM api_usage_logs
+            ORDER BY endpoint, method
+        `);
+
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ data: stats }));
+    } catch (error) {
+        console.error("Error retrieving API usage stats:", error.message);
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Failed to retrieve API usage stats' }));
+    }
+};
+
+module.exports = { getAdminData, incrementApiCall, incrementApiUsage, getApiUsageStats };
