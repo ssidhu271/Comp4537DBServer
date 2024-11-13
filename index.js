@@ -1,8 +1,10 @@
-//ChatGPT helped with the creation of this file
+// ChatGPT helped with the creation of this file
 
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 const { parse } = require('url');
-const initializeDatabase = require('./initDB'); 
+const initializeDatabase = require('./initDB');
 const { login, register, forgotPassword, resetPassword, validateToken } = require('./controllers/authController');
 const { getAdminData, incrementApiCall } = require('./controllers/apiController');
 const { getUserData } = require('./controllers/userController');
@@ -19,6 +21,22 @@ initializeDatabase().then(() => {
         if (req.method === 'OPTIONS') return;
 
         const { pathname, query } = parse(req.url, true);
+
+        // Serve files from /uploads
+        if (pathname.startsWith('/uploads/')) {
+            const filePath = path.join(__dirname, pathname);
+            if (fs.existsSync(filePath)) {
+                res.writeHead(200, {
+                    'Content-Type': 'audio/wav',
+                    'Content-Disposition': `attachment; filename="${path.basename(filePath)}"`
+                });
+                fs.createReadStream(filePath).pipe(res);
+            } else {
+                res.writeHead(404, { 'Content-Type': 'text/plain' });
+                res.end('File not found');
+            }
+            return;
+        }
 
         if (pathname === '/auth/validate' && req.method === 'GET') {
             validateToken(req, res);
@@ -39,14 +57,15 @@ initializeDatabase().then(() => {
         } else if (pathname === '/wav-files' && req.method === 'POST') {
             verifyToken(req, res, () => addWavFile(req, res));
         } else if (pathname === '/wav-files' && req.method === 'GET') {
-            const userId = query.userId;
-            verifyToken(req, res, () => getWavFilesByUser(req, res, userId));
+            verifyToken(req, res, () => getWavFilesByUser(req, res));
         } else if (pathname.startsWith('/wav-files/') && req.method === 'PUT') {
             const id = pathname.split('/').pop();
-            verifyToken(req, res, () => updateWavFileName(req, res, id));
+            req.params = { id };
+            verifyToken(req, res, () => updateWavFileName(req, res));
         } else if (pathname.startsWith('/wav-files/') && req.method === 'DELETE') {
             const id = pathname.split('/').pop();
-            verifyToken(req, res, () => deleteWavFile(req, res, id));
+            req.params = { id };
+            verifyToken(req, res, () => deleteWavFile(req, res));
         } else {
             res.statusCode = 404;
             res.setHeader('Content-Type', 'application/json');
