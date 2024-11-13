@@ -18,43 +18,52 @@ function initializeDatabase() {
                 }
 
                 // Create the reset_codes table
-                db.run(queries.createResetCodesTable, async (err) => {
+                db.run(queries.createResetCodesTable, (err) => {
                     if (err) {
                         console.error("Error creating reset_codes table:", err.message);
                         reject(err);
                         return;
                     }
 
-                    // Check if the admin user exists
-                    const adminEmail = process.env.ADMIN_EMAIL;
-                    const adminPassword = process.env.ADMIN_PASSWORD;
-                    db.get(queries.checkAdminExists, [adminEmail], async (err, row) => {
+                    // Create the wav_files table
+                    db.run(queries.createWavFileTable, (err) => {
                         if (err) {
-                            console.error("Error querying admin user:", err.message);
+                            console.error("Error creating wav_files table:", err.message);
                             reject(err);
                             return;
                         }
 
-                        if (!row) {
-                            try {
-                                const hashedPassword = await bcrypt.hash(adminPassword, 10);
-                                db.run(queries.insertAdminUser, [adminEmail, hashedPassword], (err) => {
-                                    if (err) {
-                                        console.error("Error creating admin user:", err.message);
-                                        reject(err);
-                                    } else {
-                                        console.log("Admin user created with email 'admin@admin.com'.");
-                                        resolve();
-                                    }
-                                });
-                            } catch (hashError) {
-                                console.error("Error hashing admin password:", hashError.message);
-                                reject(hashError);
+                        // Check if the admin user exists
+                        const adminEmail = process.env.ADMIN_EMAIL;
+                        const adminPassword = process.env.ADMIN_PASSWORD;
+                        db.get(queries.checkAdminExists, [adminEmail], async (err, row) => {
+                            if (err) {
+                                console.error("Error querying admin user:", err.message);
+                                reject(err);
+                                return;
                             }
-                        } else {
-                            console.log("Admin user already exists.");
-                            resolve();
-                        }
+
+                            if (!row) {
+                                try {
+                                    const hashedPassword = await bcrypt.hash(adminPassword, 10);
+                                    db.run(queries.insertAdminUser, [adminEmail, hashedPassword], (err) => {
+                                        if (err) {
+                                            console.error("Error creating admin user:", err.message);
+                                            reject(err);
+                                        } else {
+                                            console.log("Admin user created with email 'admin@admin.com'.");
+                                            resolve();
+                                        }
+                                    });
+                                } catch (hashError) {
+                                    console.error("Error hashing admin password:", hashError.message);
+                                    reject(hashError);
+                                }
+                            } else {
+                                console.log("Admin user already exists.");
+                                resolve();
+                            }
+                        });
                     });
                 });
             });

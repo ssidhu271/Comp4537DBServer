@@ -26,6 +26,10 @@ const login = async (req, res) => {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'None',
+                //for local testing
+                // httpOnly: false,
+                // secure: false,
+                // sameSite: 'Lax',
                 path: '/',
             }));
             res.statusCode = 200;

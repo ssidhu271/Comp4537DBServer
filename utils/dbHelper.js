@@ -30,6 +30,31 @@ const queries = {
         INSERT INTO users (email, password_hash, role)
         VALUES (?, ?, 'admin')
     `,
+    createWavFileTable: `
+        CREATE TABLE IF NOT EXISTS wav_files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            file_name TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            created_at INTEGER DEFAULT (strftime('%s', 'now')),
+            updated_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    `,
+    insertWavFile: `
+        INSERT INTO wav_files (user_id, file_name, file_path) 
+        VALUES (?, ?, ?)
+    `,
+    updateWavFileName: `
+        UPDATE wav_files SET file_name = ?, updated_at = (strftime('%s', 'now')) 
+        WHERE id = ? AND user_id = ?
+    `,
+    deleteWavFile: `
+        DELETE FROM wav_files WHERE id = ? AND user_id = ?
+    `,
+    getWavFilesByUser: `
+        SELECT * FROM wav_files WHERE user_id = ?
+    `,
 };
 
 // Function to run queries (insert, update, delete) with parameters
