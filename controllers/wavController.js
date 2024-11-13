@@ -4,10 +4,13 @@ const { db, runQuery, getQuery, allQuery, queries } = require('../utils/dbHelper
 const handleCors = require('../middlewares/handleCors');
 const fs = require('fs');
 const path = require('path');
+const { incrementApiUsage } = require('../controllers/apiController');
 
 // Add a new .wav file
 const addWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
+
+    incrementApiUsage('/api/addWavFile', 'POST');
 
     try {
         let body = "";
@@ -16,16 +19,25 @@ const addWavFile = async (req, res) => {
             const { fileName, fileBlob } = JSON.parse(body);
             const userId = req.user.id;
 
+            // Ensure the filename ends with .wav
+            const sanitizedFileName = fileName.endsWith('.wav') ? fileName : `${fileName}.wav`;
+            const uploadsDir = path.join(__dirname, "../uploads");
+            const filePath = path.join(uploadsDir, sanitizedFileName);
+
+            // Check if the uploads directory exists, if not, create it
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir);
+            }
+
             // Decode base64 data to a Buffer
             const buffer = Buffer.from(fileBlob, "base64");
-            const filePath = path.join(__dirname, "../uploads", `${fileName}.wav`);
 
             // Save the file in the uploads directory
             fs.writeFileSync(filePath, buffer);
 
             // Provide a URL that the frontend can use for download
-            const relativePath = `/uploads/${fileName}.wav`;
-            await runQuery("INSERT INTO wav_files (user_id, file_name, file_path) VALUES (?, ?, ?)", [userId, fileName, relativePath]);
+            const relativePath = `/uploads/${sanitizedFileName}`;
+            await runQuery("INSERT INTO wav_files (user_id, file_name, file_path) VALUES (?, ?, ?)", [userId, sanitizedFileName, relativePath]);
 
             res.statusCode = 201;
             res.setHeader("Content-Type", "application/json");
@@ -40,6 +52,8 @@ const addWavFile = async (req, res) => {
 
 const getWavFilesByUser = async (req, res) => {
     if (handleCors(req, res)) return;
+
+    incrementApiUsage('/api/getWavFilesByUser', 'GET');
 
     try {
         const userId = req.user.id;
@@ -60,6 +74,8 @@ const getWavFilesByUser = async (req, res) => {
 // Update .wav file name
 const updateWavFileName = async (req, res) => {
     if (handleCors(req, res)) return;
+
+    incrementApiUsage('/api/updateWavFileName', 'PUT');
 
     try {
         let body = '';
@@ -85,6 +101,8 @@ const updateWavFileName = async (req, res) => {
 // Delete .wav file
 const deleteWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
+
+    incrementApiUsage('/api/deleteWavFile', 'DELETE');
 
     try {
         const userId = req.user.id;

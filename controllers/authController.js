@@ -7,9 +7,12 @@ const jwtHelper = require('../utils/jwtHelper');
 const { sendResetCode } = require('../utils/mailer');
 const { db, runQuery, getQuery } = require('../utils/dbHelper');
 const cookie = require('cookie');
+const { incrementApiUsage } = require('./apiController');
 
 // Login function
 const login = async (req, res) => {
+    incrementApiUsage('/api/login', 'POST');
+
     try {
         const { email, password } = await parseBody(req); // Parse body here
         const user = await getQuery('SELECT * FROM users WHERE email = ?', [email]);
@@ -44,6 +47,8 @@ const login = async (req, res) => {
     };
 
 const register = async (req, res) => {
+    incrementApiUsage('/api/register', 'POST');
+
     try {
         const { email, password, role } = await parseBody(req);
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -62,6 +67,8 @@ const register = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
+    incrementApiUsage('/api/forgotPassword', 'POST');
+
     const { email } = await parseBody(req);
 
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
@@ -103,6 +110,8 @@ const forgotPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
+    incrementApiUsage('/api/resetPassword', 'GET');
+
     const { email, resetCode, newPassword } = await parseBody(req);
 
     db.get(
@@ -160,6 +169,8 @@ const resetPassword = async (req, res) => {
 };
 
 const validateToken = (req, res) => {
+    incrementApiUsage('/api/validateToken', 'GET');
+
     const cookies = req.headers.cookie
         ?.split(';')
         .map(cookie => cookie.trim().split('='))

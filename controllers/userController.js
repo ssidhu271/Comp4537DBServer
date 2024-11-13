@@ -1,8 +1,11 @@
 //ChatGPT helped with the creation of this file
 
 const { db, getQuery } = require('../utils/dbHelper');
+const { incrementApiUsage } = require('../controllers/apiController');
 
 const getUserData = async (req, res, user) => {
+    incrementApiUsage('/api/getUserData', 'GET');
+
     try {
         const row = await getQuery('SELECT * FROM users WHERE id = ?', [user.id]);
 

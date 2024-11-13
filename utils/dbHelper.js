@@ -55,6 +55,15 @@ const queries = {
     getWavFilesByUser: `
         SELECT * FROM wav_files WHERE user_id = ?
     `,
+    createApiCallsTable: `
+        CREATE TABLE IF NOT EXISTS api_usage_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            endpoint TEXT NOT NULL,
+            method TEXT NOT NULL,
+            request_count INTEGER DEFAULT 0,
+            UNIQUE(endpoint, method) -- Ensures each endpoint-method combination is unique
+        )
+    `,
 };
 
 // Function to run queries (insert, update, delete) with parameters
