@@ -7,7 +7,7 @@ const { parse } = require('url');
 const initializeDatabase = require('./initDB');
 const { login, register, forgotPassword, resetPassword, validateToken } = require('./controllers/authController');
 const { getAdminData, incrementApiCall, getApiUsageStats} = require('./controllers/apiController');
-const { getUserData } = require('./controllers/userController');
+const { getUserData, updateUserRole } = require('./controllers/userController');
 const { addWavFile, getWavFilesByUser, updateWavFileName, deleteWavFile } = require('./controllers/wavController');
 const handleCors = require('./middlewares/handleCors');
 const verifyToken = require('./middlewares/verifyToken');
@@ -68,6 +68,8 @@ initializeDatabase().then(() => {
             verifyToken(req, res, () => deleteWavFile(req, res));
         } else if (pathname === '/api/usage-stats' && req.method === 'GET') {
             verifyToken(req, res, () => getApiUsageStats(req, res));
+        } else if (pathname === '/api/update-role' && req.method === 'PUT') {
+            verifyToken(req, res, () => updateUserRole(req, res));
         } else {
             res.statusCode = 404;
             res.setHeader('Content-Type', 'application/json');

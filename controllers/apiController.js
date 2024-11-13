@@ -14,7 +14,7 @@ const getAdminData = async (req, res) => {
     }
 
     try {
-        const allUsers = await allQuery('SELECT email, api_calls FROM users');
+        const allUsers = await allQuery('SELECT email, api_calls, id, role FROM users');
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ data: allUsers }));

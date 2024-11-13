@@ -26,13 +26,13 @@ const login = async (req, res) => {
 
             const token = jwtHelper.createToken({ id: user.id, role: user.role });
             res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'None',
+                // httpOnly: true,
+                // secure: true,
+                // sameSite: 'None',
                 //for local testing
-                // httpOnly: false,
-                // secure: false,
-                // sameSite: 'Lax',
+                httpOnly: false,
+                secure: false,
+                sameSite: 'Lax',
                 path: '/',
             }));
             res.statusCode = 200;
