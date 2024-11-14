@@ -4,22 +4,53 @@ const { allQuery, getQuery, runQuery } = require('../utils/dbHelper'); // Use th
 
 // Function to retrieve admin data
 const getAdminData = async (req, res) => {
-    incrementApiUsage('/api/admin-data', 'GET');
-
     const user = req.user;
+
+    // Track API usage only if the user is authenticated
+    if (user && user.id) {
+        incrementApiUsage('/api/admin-data', 'GET', user.id);
+    }
+
+    // Check if the user has admin privileges
     if (user.role !== 'admin') {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: 'Access denied' }));
+        res.end(JSON.stringify({ error: 'Access denied' }));
+        return;
     }
 
     try {
-        const allUsers = await allQuery('SELECT email, api_calls, id, role FROM users');
+        const allUsers = await allQuery('SELECT id, email, role FROM users');
+
+        // Map each user to include total and /api/llm-specific API call counts
+        const usersWithApiCounts = await Promise.all(
+            allUsers.map(async (user) => {
+                const totalCallsResult = await getQuery(
+                    'SELECT SUM(request_count) as total_calls FROM api_usage_logs WHERE user_id = ?',
+                    [user.id]
+                );
+
+                const llmCallsResult = await getQuery(
+                    'SELECT SUM(request_count) as llm_calls FROM api_usage_logs WHERE user_id = ? AND endpoint = ?',
+                    [user.id, '/api/llm']
+                );
+
+                return {
+                    ...user,
+                    total_calls: totalCallsResult.total_calls || 0,
+                    llm_calls: llmCallsResult.llm_calls || 0,
+                };
+            })
+        );
+
+        // Set status code and headers for successful response
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ data: allUsers }));
+        res.end(JSON.stringify({ data: usersWithApiCounts }));
     } catch (err) {
         console.error('Error retrieving admin data:', err);
+
+        // Set status code and headers for error response
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
@@ -31,52 +62,101 @@ const incrementApiCall = async (req, res) => {
     const user = req.user;
 
     try {
-        const row = await getQuery('SELECT * FROM users WHERE id = ?', [user.id]);
+        // Check total /api/llm call count for this user
+        const totalCalls = await getQuery(
+            'SELECT SUM(request_count) as total FROM api_usage_logs WHERE user_id = ?', 
+            [user.id]
+        );
 
-        if (!row) {
-            res.statusCode = 500;
-            res.setHeader('Content-Type', 'application/json');
-            return res.end(JSON.stringify({ error: 'Failed to retrieve user data' }));
-        }
-
-        // Only proceed to increment if the user has not exceeded 20 calls or is an admin
-        if (row.api_calls < 20 || row.role === 'admin') {
-            await runQuery('UPDATE users SET api_calls = api_calls + 1 WHERE id = ?', [user.id]);
+        // Allow increment if within limit or if user is admin
+        if (!totalCalls || (totalCalls.total < 20 || user.role === 'admin')) {
+            await runQuery(
+                `INSERT INTO api_usage_logs (user_id, endpoint, method, request_count)
+                VALUES (?, '/api/llm', 'POST', 1)
+                ON CONFLICT(user_id, endpoint, method)
+                DO UPDATE SET request_count = request_count + 1`,
+                [user.id]
+            );
+            
+            // Set status code and headers for successful increment
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ message: 'API call incremented successfully' }));
         } else {
+            // Set status code and headers for exceeded limit
             res.statusCode = 403;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ warning: 'API call limit exceeded' }));
         }
     } catch (err) {
         console.error('Error incrementing API call count:', err);
+        
+        // Set status code and headers for error
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
     }
 };
 
-const incrementApiUsage = async (endpoint, method) => {
+const getApiCallSummary = async (req, res) => {
+    const user = req.user;
+
     try {
-        // Check if the endpoint-method combination already exists
+        // Fetch total calls by summing request_count per method
+        const calls = await allQuery(
+            'SELECT method, SUM(request_count) as count FROM api_usage_logs WHERE user_id = ? GROUP BY method',
+            [user.id]
+        );
+
+        // Calculate total calls
+        const totalCalls = calls.reduce((sum, call) => sum + call.count, 0);
+
+        // Fetch all individual entries for this user
+        const individualCalls = await allQuery(
+            'SELECT endpoint, method, request_count FROM api_usage_logs WHERE user_id = ?',
+            [user.id]
+        );
+
+        // Set status code and headers
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        
+        // Send response
+        res.end(JSON.stringify({
+            totalCalls,
+            breakdown: calls,
+            individualCalls: individualCalls
+        }));
+    } catch (err) {
+        console.error('Error retrieving API call summary:', err);
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: 'Failed to retrieve API call summary' }));
+    }
+};
+
+
+const incrementApiUsage = async (endpoint, method, userId) => {
+    if (!userId) {
+        console.error("Error: Missing user ID for API usage logging");
+        return;
+    }
+
+    try {
         const existingLog = await getQuery(
-            'SELECT * FROM api_usage_logs WHERE endpoint = ? AND method = ?',
-            [endpoint, method]
+            'SELECT * FROM api_usage_logs WHERE endpoint = ? AND method = ? AND user_id = ?',
+            [endpoint, method, userId]
         );
 
         if (existingLog) {
-            // If the record exists, update the request count
             await runQuery(
-                'UPDATE api_usage_logs SET request_count = request_count + 1 WHERE endpoint = ? AND method = ?',
-                [endpoint, method]
+                'UPDATE api_usage_logs SET request_count = request_count + 1 WHERE endpoint = ? AND method = ? AND user_id = ?',
+                [endpoint, method, userId]
             );
         } else {
-            // If the record doesn't exist, insert a new one
             await runQuery(
-                'INSERT INTO api_usage_logs (endpoint, method, request_count) VALUES (?, ?, 1)',
-                [endpoint, method]
+                'INSERT INTO api_usage_logs (endpoint, method, request_count, user_id) VALUES (?, ?, 1, ?)',
+                [endpoint, method, userId]
             );
         }
     } catch (error) {
@@ -96,6 +176,7 @@ const getApiUsageStats = async (req, res) => {
         const stats = await allQuery(`
             SELECT endpoint, method, request_count
             FROM api_usage_logs
+            GROUP BY endpoint, method
             ORDER BY endpoint, method
         `);
 
@@ -110,4 +191,4 @@ const getApiUsageStats = async (req, res) => {
     }
 };
 
-module.exports = { getAdminData, incrementApiCall, incrementApiUsage, getApiUsageStats };
+module.exports = { getAdminData, incrementApiCall, incrementApiUsage, getApiUsageStats, getApiCallSummary };
