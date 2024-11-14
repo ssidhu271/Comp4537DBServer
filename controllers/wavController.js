@@ -10,7 +10,8 @@ const { incrementApiUsage } = require('../controllers/apiController');
 const addWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
 
-    incrementApiUsage('/api/addWavFile', 'POST');
+    const userId = req.user.id;
+    incrementApiUsage('/api/addWavFile', 'POST', userId);
 
     try {
         let body = "";
@@ -53,7 +54,8 @@ const addWavFile = async (req, res) => {
 const getWavFilesByUser = async (req, res) => {
     if (handleCors(req, res)) return;
 
-    incrementApiUsage('/api/getWavFilesByUser', 'GET');
+    const userId = req.user.id;
+    incrementApiUsage('/api/getWavFilesByUser', 'GET', userId);
 
     try {
         const userId = req.user.id;
@@ -75,7 +77,8 @@ const getWavFilesByUser = async (req, res) => {
 const updateWavFileName = async (req, res) => {
     if (handleCors(req, res)) return;
 
-    incrementApiUsage('/api/updateWavFileName', 'PUT');
+    const userId = req.user.id;
+    incrementApiUsage('/api/updateWavFileName', 'PUT', userId);
 
     try {
         let body = '';
@@ -102,7 +105,8 @@ const updateWavFileName = async (req, res) => {
 const deleteWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
 
-    incrementApiUsage('/api/deleteWavFile', 'DELETE');
+    const userId = req.user.id;
+    incrementApiUsage('/api/deleteWavFile', 'DELETE', userId);
 
     try {
         const userId = req.user.id;

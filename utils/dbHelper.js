@@ -12,8 +12,7 @@ const queries = {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'user',
-            api_calls INTEGER DEFAULT 0
+            role TEXT DEFAULT 'user'
         )
     `,
     createResetCodesTable: `
@@ -58,10 +57,12 @@ const queries = {
     createApiCallsTable: `
         CREATE TABLE IF NOT EXISTS api_usage_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             endpoint TEXT NOT NULL,
             method TEXT NOT NULL,
             request_count INTEGER DEFAULT 0,
-            UNIQUE(endpoint, method) -- Ensures each endpoint-method combination is unique
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE(user_id, endpoint, method) -- Unique constraint per user
         )
     `,
 };
