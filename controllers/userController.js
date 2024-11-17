@@ -33,6 +33,7 @@ const getUserData = async (req, res, user) => {
 };
 
 const updateUserRole = async (req, res) => {
+    // Check if the requesting user is an admin
     if (!req.user || req.user.role !== 'admin') {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'application/json');
@@ -45,8 +46,35 @@ const updateUserRole = async (req, res) => {
     try {
         const { userId, newRole } = await parseBody(req);
 
+        // Retrieve the role_id for the specified new role
+        const roleResult = await getQuery(
+            `
+            SELECT id AS role_id
+            FROM roles
+            WHERE role_name = ?
+            `,
+            [newRole]
+        );
+
+        if (!roleResult) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Invalid role specified' }));
+            return;
+        }
+
+        const roleId = roleResult.role_id;
+
         // Update the user's role in the database
-        await runQuery('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
+        await runQuery(
+            `
+            UPDATE users
+            SET role_id = ?
+            WHERE id = ?
+            `,
+            [roleId, userId]
+        );
+
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ message: 'User role updated successfully' }));

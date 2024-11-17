@@ -11,16 +11,34 @@ const getAdminData = async (req, res) => {
         incrementApiUsage('/api/admin-data', 'GET', user.id);
     }
 
-    // Check if the user has admin privileges
-    if (user.role !== 'admin') {
-        res.statusCode = 403;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Access denied' }));
-        return;
-    }
-
     try {
-        const allUsers = await allQuery('SELECT id, email, role FROM users');
+        // Check if the user has admin privileges by fetching the role dynamically
+        const userRoleResult = await getQuery(
+            `
+            SELECT r.role_name
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            WHERE u.id = ?
+            `,
+            [user.id]
+        );
+
+        const userRole = userRoleResult?.role_name;
+        if (userRole !== 'admin') {
+            res.statusCode = 403;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Access denied' }));
+            return;
+        }
+
+        // Retrieve all users with their roles
+        const allUsers = await allQuery(
+            `
+            SELECT u.id, u.email, r.role_name AS role
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            `
+        );
 
         // Map each user to include total and /api/llm-specific API call counts
         const usersWithApiCounts = await Promise.all(
