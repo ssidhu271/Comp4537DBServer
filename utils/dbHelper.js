@@ -7,12 +7,22 @@ const dbPath = path.resolve(__dirname, '../myApp.db');
 const db = new sqlite3.Database(dbPath);
 
 const queries = {
+    createRolesTable: `
+        CREATE TABLE IF NOT EXISTS roles (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            role_name TEXT UNIQUE NOT NULL
+        )
+    `,
+    insertDefaultRoles: `
+        INSERT OR IGNORE INTO roles (role_name) VALUES ('admin'), ('user')
+    `,
     createUsersTable: `
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'user'
+            role_id INTEGER NOT NULL,
+            FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL
         )
     `,
     createResetCodesTable: `
@@ -24,10 +34,15 @@ const queries = {
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         )
     `,
-    checkAdminExists: "SELECT * FROM users WHERE email = ?",
+    checkAdminExists: `
+        SELECT u.* 
+        FROM users u
+        INNER JOIN roles r ON u.role_id = r.id
+        WHERE u.email = ? AND r.role_name = 'admin'
+    `,
     insertAdminUser: `
-        INSERT INTO users (email, password_hash, role)
-        VALUES (?, ?, 'admin')
+        INSERT INTO users (email, password_hash, role_id)
+        VALUES (?, ?, (SELECT id FROM roles WHERE role_name = 'admin'))
     `,
     createWavFileTable: `
         CREATE TABLE IF NOT EXISTS wav_files (

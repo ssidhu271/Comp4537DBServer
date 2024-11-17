@@ -13,17 +13,31 @@ const { incrementApiUsage } = require('./apiController');
 const login = async (req, res) => {
     try {
         const { email, password } = await parseBody(req);
-        const user = await getQuery('SELECT * FROM users WHERE email = ?', [email]);
 
+        // Retrieve user and role information
+        const user = await getQuery(
+            `
+            SELECT u.id, u.email, u.password_hash, r.role_name AS role
+            FROM users u
+            INNER JOIN roles r ON u.role_id = r.id
+            WHERE u.email = ?
+            `,
+            [email]
+        );
+
+        // Validate user credentials
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             res.statusCode = 401;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: 'Invalid credentials' }));
             return;
-        } 
+        }
 
+        // Create JWT token with user ID and role
         const token = jwtHelper.createToken({ id: user.id, role: user.role });
-        res.setHeader('Set-Cookie', cookie.serialize('jwt', token, {
+        res.setHeader(
+            'Set-Cookie',
+            cookie.serialize('jwt', token, {
                 // httpOnly: true,
                 // secure: true,
                 // sameSite: 'None',
@@ -32,8 +46,10 @@ const login = async (req, res) => {
                 secure: false,
                 sameSite: 'Lax',
                 path: '/',
-        }));
+            })
+        );
 
+        // Increment API usage for login
         incrementApiUsage('/api/login', 'POST', user.id);
 
         res.statusCode = 200;
@@ -43,7 +59,7 @@ const login = async (req, res) => {
         console.error('Error in login:', error);
         res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Invalid JSON format' }));
+        res.end(JSON.stringify({ error: 'Invalid JSON Format' }));
     }
 };
 
@@ -52,13 +68,41 @@ const register = async (req, res) => {
 
     try {
         const { email, password, role } = await parseBody(req);
+
+        // Hash the user's password
         const hashedPassword = await bcrypt.hash(password, 10);
-        
-        await runQuery('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)', [email, hashedPassword, role || 'user']);
-        
+
+        // Determine role ID from roles table
+        const roleResult = await getQuery(
+            `
+            SELECT id AS role_id
+            FROM roles
+            WHERE role_name = ?
+            `,
+            [role || 'user']
+        );
+
+        if (!roleResult) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Invalid role specified' }));
+            return;
+        }
+
+        const roleId = roleResult.role_id;
+
+        // Insert the new user with the corresponding role_id
+        await runQuery(
+            `
+            INSERT INTO users (email, password_hash, role_id)
+            VALUES (?, ?, ?)
+            `,
+            [email, hashedPassword, roleId]
+        );
+
         res.statusCode = 201;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: 'User registered' }));
+        res.end(JSON.stringify({ message: 'User registered successfully' }));
     } catch (error) {
         console.error('Error in register:', error);
         res.statusCode = 400;
