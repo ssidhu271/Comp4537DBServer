@@ -38,9 +38,13 @@ const login = async (req, res) => {
         res.setHeader(
             'Set-Cookie',
             cookie.serialize('jwt', token, {
-                httpOnly: true,
-                secure: true,
-                sameSite: 'Strict',
+                // httpOnly: true,
+                // secure: true,
+                // sameSite: 'None',
+                //for local testing
+                httpOnly: false,
+                secure: false,
+                sameSite: 'Lax',
                 path: '/',
             })
         );
@@ -53,9 +57,9 @@ const login = async (req, res) => {
         res.end(JSON.stringify({ message: 'Login successful' }));
     } catch (error) {
         console.error('Error in login:', error);
-        res.statusCode = 500;
+        res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'An error occurred during login' }));
+        res.end(JSON.stringify({ error: 'Invalid JSON Format' }));
     }
 };
 
@@ -101,7 +105,7 @@ const register = async (req, res) => {
         res.end(JSON.stringify({ message: 'User registered successfully' }));
     } catch (error) {
         console.error('Error in register:', error);
-        res.statusCode = 500;
+        res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: 'User registration failed' }));
     }
