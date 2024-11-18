@@ -1,0 +1,464 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Grey Dune",
+    "version": "1.0.0",
+    "description": "Centralized documentation for API endpoints."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8888"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/auth/validate": {
+      "get": {
+        "summary": "Validate Token",
+        "description": "Validates the authentication token and returns the validation status.",
+        "responses": {
+          "200": {
+            "description": "Token is valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authenticated": {
+                      "type": "boolean"
+                    },
+                    "role": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid token or unauthorized access."
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "summary": "User Login",
+        "description": "Authenticates a user and returns a JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials."
+          }
+        }
+      }
+    },
+    "/register": {
+      "post": {
+        "summary": "User Registration",
+        "description": "Registers a new user in the system.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or role."
+          }
+        }
+      }
+    },
+    "/forgot-password": {
+      "post": {
+        "summary": "Forgot Password",
+        "description": "Generates a reset code for a user and sends it via email.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reset code sent successfully."
+          },
+          "500": {
+            "description": "User not found or email sending failed."
+          }
+        }
+      }
+    },
+    "/reset-password": {
+      "post": {
+        "summary": "Reset Password",
+        "description": "Resets a user password using a reset code.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "resetCode": {
+                    "type": "string"
+                  },
+                  "newPassword": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully."
+          },
+          "400": {
+            "description": "Invalid or expired reset code."
+          }
+        }
+      }
+    },
+    "/api/user-data": {
+      "get": {
+        "summary": "Get User Data",
+        "description": "Fetches API usage data for the authenticated user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "api_calls": {
+                      "type": "integer"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized access."
+          }
+        }
+      }
+    },
+    "/api/admin-data": {
+      "get": {
+        "summary": "Get Admin Data",
+        "description": "Retrieves API usage and role information for all users.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved admin data."
+          },
+          "403": {
+            "description": "Access denied."
+          }
+        }
+      }
+    },
+    "/wav-files": {
+      "post": {
+        "summary": "Add WAV File",
+        "description": "Allows an authenticated user to upload a WAV file.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": "string"
+                  },
+                  "fileBlob": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully."
+          },
+          "500": {
+            "description": "Error uploading the file."
+          }
+        }
+      },
+      "get": {
+        "summary": "Get WAV Files",
+        "description": "Fetches all WAV files uploaded by the authenticated user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of WAV files."
+          },
+          "500": {
+            "description": "Error fetching files."
+          }
+        }
+      }
+    },
+    "/wav-files/{id}": {
+      "put": {
+        "summary": "Update WAV File Name",
+        "description": "Updates the name of a specific WAV file.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the WAV file to update.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "fileName": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File name updated successfully."
+          },
+          "500": {
+            "description": "Error updating file name."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete WAV File",
+        "description": "Deletes a specific WAV file.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID of the WAV file to delete.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File deleted successfully."
+          },
+          "500": {
+            "description": "Error deleting file."
+          }
+        }
+      }
+    },
+    "/api/increment-api-call": {
+      "post": {
+        "summary": "Increment API Call",
+        "description": "Increments the API call count for the authenticated user.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API call incremented successfully."
+          },
+          "403": {
+            "description": "API call limit exceeded."
+          }
+        }
+      }
+    },
+    "/api/usage-stats": {
+      "get": {
+        "summary": "API Usage Statistics",
+        "description": "Provides statistics for all API endpoints.",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API usage statistics retrieved successfully."
+          },
+          "403": {
+            "description": "Access denied."
+          }
+        }
+      }
+    },
+    "/api/update-role": {
+      "put": {
+        "summary": "Update User Role",
+        "description": "Updates the role of a user (admin only).",
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "integer"
+                  },
+                  "newRole": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Role updated successfully."
+          },
+          "403": {
+            "description": "Access denied."
+          }
+        }
+      }
+    }
+  },
+  "tags": []
+}
