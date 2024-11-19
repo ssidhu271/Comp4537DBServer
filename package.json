@@ -16,6 +16,8 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.11.3",
     "nodemailer": "^6.9.16",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-dist": "^5.18.2"
   }
 }
