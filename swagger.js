@@ -13,7 +13,7 @@ const swaggerOptions = {
     },
     servers: [
       {
-        url: 'http://localhost:8888', // Replace with your base URL
+        url: 'https://comp4537databaseserver-ahgghrarabaxhyec.westus-01.azurewebsites.net', // Replace with your base URL
       },
     ],
     components: {
