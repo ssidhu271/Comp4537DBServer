@@ -35,12 +35,17 @@ async function handleModelUrlRequest(req, res) {
     const { query } = parse(req.url, true);
     const { instrument } = query;
 
-    const userId = req.user.id;
+    const userId = req.user?.id; // Safely check for `req.user`
     incrementApiUsage('/api/LLM', 'GET', userId);
 
     // Validate the query parameter
     if (!instrument || typeof instrument !== 'string' || instrument.trim() === '') {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.writeHead(400, { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': req.headers.origin, // Allow all origins or specific origin
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        });
         res.end(JSON.stringify({ error: 'Instrument is required and must be a valid string.' }));
         return;
     }
@@ -48,11 +53,25 @@ async function handleModelUrlRequest(req, res) {
     try {
         // Forward the request to project-express
         const projectExpressResponse = await forwardRequestToProjectExpress(instrument);
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+
+        // Add CORS headers to the response
+        res.writeHead(200, { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': req.headers.origin,
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        });
         res.end(JSON.stringify(projectExpressResponse));
     } catch (error) {
         console.error("Error forwarding request to project-express:", error.message);
-        res.writeHead(500, { 'Content-Type': 'application/json' });
+
+        // Add CORS headers to the error response
+        res.writeHead(500, { 
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': req.headers.origin,
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        });
         res.end(JSON.stringify({ error: "Failed to fetch model URL from project-express" }));
     }
 }
