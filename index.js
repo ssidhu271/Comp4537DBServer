@@ -6,7 +6,7 @@ const path = require('path');
 const { parse } = require('url');
 const initializeDatabase = require('./initDB');
 const { login, register, forgotPassword, resetPassword, validateToken } = require('./controllers/authController');
-const { getAdminData, incrementApiCall, getApiUsageStats, getApiCallSummary} = require('./controllers/apiController');
+const { getAdminData, incrementApiCall, getApiUsageStats} = require('./controllers/apiController');
 const { getUserData, updateUserRole } = require('./controllers/userController');
 const { addWavFile, getWavFilesByUser, updateWavFileName, deleteWavFile } = require('./controllers/wavController');
 const handleCors = require('./middlewares/handleCors');
@@ -115,8 +115,6 @@ initializeDatabase().then(() => {
             verifyToken(req, res, () => getUserData(req, res, req.user));
         } else if (pathname === '/api/v1/admin-data' && req.method === 'GET') {
             verifyToken(req, res, () => getAdminData(req, res, req.user));
-        } else if (pathname === '/api/v1/increment-api-call' && req.method === 'POST') {
-            verifyToken(req, res, () => incrementApiCall(req, res, req.user));
         } else if (pathname === '/api/v1/wav-files' && req.method === 'POST') {
             verifyToken(req, res, () => addWavFile(req, res));
         } else if (pathname === '/api/v1/wav-files' && req.method === 'GET') {
@@ -133,8 +131,6 @@ initializeDatabase().then(() => {
             verifyToken(req, res, () => getApiUsageStats(req, res));
         } else if (pathname === '/api/v1/update-role' && req.method === 'PUT') {
             verifyToken(req, res, () => updateUserRole(req, res));
-        } else if (pathname === '/api/v1/getApiCallSummary' && req.method === 'GET') {
-            verifyToken(req, res, () => getApiCallSummary(req, res));
         } else if (pathname === '/api/v1/get-model-url' && req.method === 'GET') {
             verifyToken(req, res, () => handleModelUrlRequest(req, res));
         } else {

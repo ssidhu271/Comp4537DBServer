@@ -116,43 +116,6 @@ const incrementApiCall = async (req, res) => {
     }
 };
 
-const getApiCallSummary = async (req, res) => {
-    const user = req.user;
-
-    try {
-        // Fetch total calls by summing request_count per method
-        const calls = await allQuery(
-            'SELECT method, SUM(request_count) as count FROM api_usage_logs WHERE user_id = ? GROUP BY method',
-            [user.id]
-        );
-
-        // Calculate total calls
-        const totalCalls = calls.reduce((sum, call) => sum + call.count, 0);
-
-        // Fetch all individual entries for this user
-        const individualCalls = await allQuery(
-            'SELECT endpoint, method, request_count FROM api_usage_logs WHERE user_id = ?',
-            [user.id]
-        );
-
-        // Set status code and headers
-        res.statusCode = 200;
-        res.setHeader('Content-Type', 'application/json');
-        
-        // Send response
-        res.end(JSON.stringify({
-            totalCalls,
-            breakdown: calls,
-            individualCalls: individualCalls
-        }));
-    } catch (err) {
-        console.error('Error retrieving API call summary:', err);
-        res.statusCode = 500;
-        res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Failed to retrieve API call summary' }));
-    }
-};
-
 
 const incrementApiUsage = async (endpoint, method, userId) => {
     if (!userId) {
@@ -209,4 +172,4 @@ const getApiUsageStats = async (req, res) => {
     }
 };
 
-module.exports = { getAdminData, incrementApiCall, incrementApiUsage, getApiUsageStats, getApiCallSummary };
+module.exports = { getAdminData, incrementApiCall, incrementApiUsage, getApiUsageStats };
