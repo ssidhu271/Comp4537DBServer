@@ -1,5 +1,4 @@
 const https = require('https');
-const http = require('http'); // Use http module for HTTP URLs
 const { parse } = require('url');
 const { incrementApiUsage } = require('../controllers/apiController');
 const parseBody = require('../utils/parseBody');
@@ -8,7 +7,7 @@ function forwardRequestToProjectExpress(instrument) {
     const url = `https://comp4537-project-express-ckfph6esbdfpffg0.canadacentral-01.azurewebsites.net/api/get-model-url?instrument=${encodeURIComponent(instrument)}`;
 
     return new Promise((resolve, reject) => {
-        http.get(url, (res) => {
+        https.get(url, (res) => {
             let data = '';
 
             // Accumulate data chunks
