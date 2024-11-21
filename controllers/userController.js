@@ -11,7 +11,7 @@ const getUserData = async (req, res, user) => {
         // Calculate total API calls specifically for the /api/llm endpoint for this user
         const totalCallsResult = await getQuery(
             'SELECT SUM(request_count) as total_calls FROM api_usage_logs WHERE user_id = ? AND endpoint = ?',
-            [user.id, '/api/llm']
+            [user.id, '/api/LLM']
         );
 
         const totalCalls = totalCallsResult.total_calls || 0;
