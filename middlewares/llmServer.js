@@ -1,8 +1,8 @@
 const https = require('https');
 const { parse } = require('url');
 const { incrementApiUsage } = require('../controllers/apiController');
-const parseBody = require('../utils/parseBody');
 
+// Forward request to project-express
 function forwardRequestToProjectExpress(instrument) {
     const url = `https://comp4537-project-express-ckfph6esbdfpffg0.canadacentral-01.azurewebsites.net/api/get-model-url?instrument=${encodeURIComponent(instrument)}`;
 
@@ -30,19 +30,24 @@ function forwardRequestToProjectExpress(instrument) {
     });
 }
 
-// Function to handle the /api/get-model-url route
+// Handle /api/get-model-url route
 async function handleModelUrlRequest(req, res) {
     const { query } = parse(req.url, true);
     const { instrument } = query;
 
-    const userId = req.user?.id; // Safely check for `req.user`
+    // Get origin from headers
+    const origin = req.headers.origin;
+    const allowedOrigin = 'https://happy-island-03f35251e.5.azurestaticapps.net';
+
+    // Increment API usage
+    const userId = req.user?.id; // Safely access user ID
     incrementApiUsage('/api/LLM', 'GET', userId);
 
-    // Validate the query parameter
+    // Validate the instrument parameter
     if (!instrument || typeof instrument !== 'string' || instrument.trim() === '') {
-        res.writeHead(400, { 
+        res.writeHead(400, {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': req.headers.origin, // Allow all origins or specific origin
+            'Access-Control-Allow-Origin': origin === allowedOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         });
@@ -54,10 +59,10 @@ async function handleModelUrlRequest(req, res) {
         // Forward the request to project-express
         const projectExpressResponse = await forwardRequestToProjectExpress(instrument);
 
-        // Add CORS headers to the response
-        res.writeHead(200, { 
+        // Add CORS headers and send the response
+        res.writeHead(200, {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': req.headers.origin,
+            'Access-Control-Allow-Origin': origin === allowedOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         });
@@ -65,10 +70,10 @@ async function handleModelUrlRequest(req, res) {
     } catch (error) {
         console.error("Error forwarding request to project-express:", error.message);
 
-        // Add CORS headers to the error response
-        res.writeHead(500, { 
+        // Handle errors with CORS headers
+        res.writeHead(500, {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': req.headers.origin,
+            'Access-Control-Allow-Origin': origin === allowedOrigin,
             'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
             'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         });
