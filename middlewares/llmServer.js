@@ -5,7 +5,7 @@ const { incrementApiUsage } = require('../controllers/apiController');
 const parseBody = require('../utils/parseBody');
 
 function forwardRequestToProjectExpress(instrument) {
-    const url = `http://localhost:8080/api/get-model-url?instrument=${encodeURIComponent(instrument)}`;
+    const url = `https://comp4537-project-express-ckfph6esbdfpffg0.canadacentral-01.azurewebsites.net/api/get-model-url?instrument=${encodeURIComponent(instrument)}`;
 
     return new Promise((resolve, reject) => {
         http.get(url, (res) => {
