@@ -50,7 +50,7 @@ const getAdminData = async (req, res) => {
 
                 const llmCallsResult = await getQuery(
                     'SELECT SUM(request_count) as llm_calls FROM api_usage_logs WHERE user_id = ? AND endpoint = ?',
-                    [user.id, '/api/llm']
+                    [user.id, '/api/LLM']
                 );
 
                 return {

@@ -11,6 +11,7 @@ const { getUserData, updateUserRole } = require('./controllers/userController');
 const { addWavFile, getWavFilesByUser, updateWavFileName, deleteWavFile } = require('./controllers/wavController');
 const handleCors = require('./middlewares/handleCors');
 const verifyToken = require('./middlewares/verifyToken');
+const { handleModelUrlRequest } = require('./middlewares/llmServer');
 require('dotenv').config();
 
 const PORT = process.env.PORT || 8888;
@@ -100,40 +101,42 @@ initializeDatabase().then(() => {
             return;
         }
 
-        if (pathname === '/auth/validate' && req.method === 'GET') {
+        if (pathname === '/api/v1/auth/validate' && req.method === 'GET') {
             validateToken(req, res);
-        } else if (pathname === '/login' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/login' && req.method === 'POST') {
             await login(req, res);
-        } else if (pathname === '/register' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/register' && req.method === 'POST') {
             await register(req, res);
-        } else if (pathname === '/forgot-password' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/forgot-password' && req.method === 'POST') {
             await forgotPassword(req, res);
-        } else if (pathname === '/reset-password' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/reset-password' && req.method === 'POST') {
             await resetPassword(req, res);
-        } else if (pathname === '/api/user-data' && req.method === 'GET') {
+        } else if (pathname === '/api/v1/user-data' && req.method === 'GET') {
             verifyToken(req, res, () => getUserData(req, res, req.user));
-        } else if (pathname === '/api/admin-data' && req.method === 'GET') {
+        } else if (pathname === '/api/v1/admin-data' && req.method === 'GET') {
             verifyToken(req, res, () => getAdminData(req, res, req.user));
-        } else if (pathname === '/api/increment-api-call' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/increment-api-call' && req.method === 'POST') {
             verifyToken(req, res, () => incrementApiCall(req, res, req.user));
-        } else if (pathname === '/wav-files' && req.method === 'POST') {
+        } else if (pathname === '/api/v1/wav-files' && req.method === 'POST') {
             verifyToken(req, res, () => addWavFile(req, res));
-        } else if (pathname === '/wav-files' && req.method === 'GET') {
+        } else if (pathname === '/api/v1/wav-files' && req.method === 'GET') {
             verifyToken(req, res, () => getWavFilesByUser(req, res));
-        } else if (pathname.startsWith('/wav-files/') && req.method === 'PUT') {
+        } else if (pathname.startsWith('/api/v1/wav-files/') && req.method === 'PUT') {
             const id = pathname.split('/').pop();
             req.params = { id };
             verifyToken(req, res, () => updateWavFileName(req, res));
-        } else if (pathname.startsWith('/wav-files/') && req.method === 'DELETE') {
+        } else if (pathname.startsWith('/api/v1/wav-files/') && req.method === 'DELETE') {
             const id = pathname.split('/').pop();
             req.params = { id };
             verifyToken(req, res, () => deleteWavFile(req, res));
-        } else if (pathname === '/api/usage-stats' && req.method === 'GET') {
+        } else if (pathname === '/api/v1/usage-stats' && req.method === 'GET') {
             verifyToken(req, res, () => getApiUsageStats(req, res));
-        } else if (pathname === '/api/update-role' && req.method === 'PUT') {
+        } else if (pathname === '/api/v1/update-role' && req.method === 'PUT') {
             verifyToken(req, res, () => updateUserRole(req, res));
-        } else if (pathname === 'getApiCallSummary' && req.method === 'GET') {
+        } else if (pathname === '/api/v1/getApiCallSummary' && req.method === 'GET') {
             verifyToken(req, res, () => getApiCallSummary(req, res));
+        } else if (pathname === '/api/v1/get-model-url' && req.method === 'GET') {
+            verifyToken(req, res, () => handleModelUrlRequest(req, res));
         } else {
             res.statusCode = 404;
             res.setHeader('Content-Type', 'application/json');
