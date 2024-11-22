@@ -9,11 +9,19 @@ const { db, runQuery, getQuery } = require('../utils/dbHelper');
 const cookie = require('cookie');
 const { incrementApiUsage } = require('./apiController');
 const MESSAGE = require('../lang/messages/en/user');
+const { validateEmail } = require('../utils/validation');
 
-// Login function
 const login = async (req, res) => {
     try {
         const { email, password } = await parseBody(req);
+
+        // Input validation
+        if (!validateEmail(email) || !password) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+            return;
+        }
 
         // Retrieve user and role information
         const user = await getQuery(
@@ -30,7 +38,7 @@ const login = async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             res.statusCode = 401;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error:  MESSAGE.errors.invalidCredentials }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidCredentials }));
             return;
         }
 
@@ -64,6 +72,14 @@ const login = async (req, res) => {
 const register = async (req, res) => {
     try {
         const { email, password, role } = await parseBody(req);
+
+        // Input validation
+        if (!validateEmail(email) || !password) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+            return;
+        }
 
         // Hash the user's password
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -149,6 +165,14 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     const { email, resetCode, newPassword } = await parseBody(req);
+
+    // Input validation
+    if (!validateEmail(email) || !validateNumber(resetCode) || !newPassword) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+        return;
+    }
 
     db.get(
         `
