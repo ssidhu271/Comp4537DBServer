@@ -1,6 +1,7 @@
 //ChatGPT helped with the creation of this file
 
 const { allQuery, getQuery, runQuery } = require('../utils/dbHelper'); // Use the helper functions
+const MESSAGE = require('../lang/messages/en/user');
 
 // Function to retrieve admin data
 const getAdminData = async (req, res) => {
@@ -27,7 +28,7 @@ const getAdminData = async (req, res) => {
         if (userRole !== 'admin') {
             res.statusCode = 403;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Access denied' }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.accessDenied }));
             return;
         }
 
@@ -71,7 +72,7 @@ const getAdminData = async (req, res) => {
         // Set status code and headers for error response
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Failed to retrieve users data' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.failedToRetrieveUsersData }));
     }
 };
 
@@ -99,12 +100,12 @@ const incrementApiCall = async (req, res) => {
             // Set status code and headers for successful increment
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ message: 'API call incremented successfully' }));
+            res.end(JSON.stringify({ message: MESSAGE.messages.apiCallIncrementedSuccessfully }));
         } else {
             // Set status code and headers for exceeded limit
             res.statusCode = 403;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ warning: 'API call limit exceeded' }));
+            res.end(JSON.stringify({ warning: MESSAGE.errors.apiCallLimitExceeded }));
         }
     } catch (err) {
         console.error('Error incrementing API call count:', err);
@@ -112,14 +113,14 @@ const incrementApiCall = async (req, res) => {
         // Set status code and headers for error
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Failed to increment API calls' }));
+        res.end(JSON.stringify({ error:  MESSAGE.errors.failedToIncrementApiCalls }));
     }
 };
 
 
 const incrementApiUsage = async (endpoint, method, userId) => {
     if (!userId) {
-        console.error("Error: Missing user ID for API usage logging");
+        console.error(MESSAGE.warnings.missingUserId);
         return;
     }
 
@@ -150,15 +151,15 @@ const getApiUsageStats = async (req, res) => {
     if (user.role !== 'admin') {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'application/json');
-        return res.end(JSON.stringify({ error: 'Access denied' }));
+        return res.end(JSON.stringify({ error: MESSAGE.errors.accessDenied }));
     }
 
     try {
         const stats = await allQuery(`
-            SELECT endpoint, method, request_count
+            SELECT endpoint, method, SUM(request_count) AS request_count
             FROM api_usage_logs
             GROUP BY endpoint, method
-            ORDER BY endpoint, method
+            ORDER BY endpoint, method;
         `);
 
         res.statusCode = 200;
@@ -168,7 +169,7 @@ const getApiUsageStats = async (req, res) => {
         console.error("Error retrieving API usage stats:", error.message);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Failed to retrieve API usage stats' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.failedToRetrieveApiUsageStats }));
     }
 };
 

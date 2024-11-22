@@ -8,11 +8,20 @@ const { sendResetCode } = require('../utils/mailer');
 const { db, runQuery, getQuery } = require('../utils/dbHelper');
 const cookie = require('cookie');
 const { incrementApiUsage } = require('./apiController');
+const MESSAGE = require('../lang/messages/en/user');
+const { validateEmail } = require('../utils/validation');
 
-// Login function
 const login = async (req, res) => {
     try {
         const { email, password } = await parseBody(req);
+
+        // Input validation
+        if (!validateEmail(email) || !password) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+            return;
+        }
 
         // Retrieve user and role information
         const user = await getQuery(
@@ -29,7 +38,7 @@ const login = async (req, res) => {
         if (!user || !(await bcrypt.compare(password, user.password_hash))) {
             res.statusCode = 401;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Invalid credentials' }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidCredentials }));
             return;
         }
 
@@ -41,33 +50,36 @@ const login = async (req, res) => {
                 httpOnly: true,
                 secure: true,
                 sameSite: 'None',
-                //for local testing
-                // httpOnly: false,
-                // secure: false,
-                // sameSite: 'Lax',
+                maxAge: 60 * 60,
                 path: '/',
             })
         );
 
         // Increment API usage for login
-        incrementApiUsage('/api/login', 'POST', user.id);
+        incrementApiUsage(MESSAGE.api.login, 'POST', user.id);
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: 'Login successful' }));
+        res.end(JSON.stringify({ message: MESSAGE.messages.loginSuccessful }));
     } catch (error) {
         console.error('Error in login:', error);
         res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Invalid JSON Format' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
     }
 };
 
 const register = async (req, res) => {
-    incrementApiUsage('/api/register', 'POST', null);
-
     try {
         const { email, password, role } = await parseBody(req);
+
+        // Input validation
+        if (!validateEmail(email) || !password) {
+            res.statusCode = 400;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+            return;
+        }
 
         // Hash the user's password
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -85,7 +97,7 @@ const register = async (req, res) => {
         if (!roleResult) {
             res.statusCode = 400;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Invalid role specified' }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidRole }));
             return;
         }
 
@@ -102,12 +114,11 @@ const register = async (req, res) => {
 
         res.statusCode = 201;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: 'User registered successfully' }));
+        res.end(JSON.stringify({ message: MESSAGE.messages.userRegistered }));
     } catch (error) {
-        console.error('Error in register:', error);
         res.statusCode = 400;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'User registration failed' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.userRegistrationFailed }));
     }
 };
 
@@ -118,24 +129,22 @@ const forgotPassword = async (req, res) => {
 
     db.get('SELECT id FROM users WHERE email = ?', [email], async (err, user) => {
         if (err || !user) {
-            console.error('Database error or user not found:', err);
             res.statusCode = 500;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'User not found' }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.userNotFound }));
             return;
         }
 
-        incrementApiUsage('/api/forgotPassword', 'POST', user.id);
+        incrementApiUsage(MESSAGE.api.forgotPassword, 'POST', user.id);
 
         db.run(
             'INSERT INTO reset_codes (user_id, reset_code, reset_expires) VALUES (?, ?, ?)',
             [user.id, resetCode, expires],
             async (err) => {
                 if (err) {
-                    console.error('Database insert error:', err);
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Failed to generate reset code' }));
+                    res.end(JSON.stringify({ error: MESSAGE.errors.failedToGenerateResetCode }));
                     return;
                 }
                 
@@ -143,12 +152,11 @@ const forgotPassword = async (req, res) => {
                     await sendResetCode(email, resetCode);
                     res.statusCode = 200;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ message: 'Reset code sent to email' }));
+                    res.end(JSON.stringify({ message: MESSAGE.messages.resetCodeSent }));
                 } catch (emailError) {
-                    console.error('Email sending error:', emailError);
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Failed to send email' }));
+                    res.end(JSON.stringify({ error: MESSAGE.errors.failedToSendEmail }));
                 }
             }
         );
@@ -157,6 +165,14 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     const { email, resetCode, newPassword } = await parseBody(req);
+
+    // Input validation
+    if (!validateEmail(email) || !validateNumber(resetCode) || !newPassword) {
+        res.statusCode = 400;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: MESSAGE.errors.invalidJsonFormat }));
+        return;
+    }
 
     db.get(
         `
@@ -168,21 +184,19 @@ const resetPassword = async (req, res) => {
         [email, resetCode],
         (err, data) => {
             if (err || !data || data.reset_expires < Date.now()) {
-                console.error('Invalid or expired reset code:', err);
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify({ error: 'Invalid or expired reset code' }));
+                res.end(JSON.stringify({ error: MESSAGE.errors.invalidOrExpiredResetCode }));
                 return;
             }
 
-            incrementApiUsage('/api/resetPassword', 'POST', data.user_id);
+            incrementApiUsage(MESSAGE.api.resetPassword, 'POST', data.user_id);
 
             bcrypt.hash(newPassword, 10, (hashErr, hashedPassword) => {
                 if (hashErr) {
-                    console.error('Hashing error:', hashErr);
                     res.statusCode = 500;
                     res.setHeader('Content-Type', 'application/json');
-                    res.end(JSON.stringify({ error: 'Failed to hash password' }));
+                    res.end(JSON.stringify({ error: MESSAGE.errors.failedToHashPassword }));
                     return;
                 }
 
@@ -191,10 +205,9 @@ const resetPassword = async (req, res) => {
                     [hashedPassword, data.user_id],
                     (updateErr) => {
                         if (updateErr) {
-                            console.error('Database update error:', updateErr);
                             res.statusCode = 500;
                             res.setHeader('Content-Type', 'application/json');
-                            res.end(JSON.stringify({ error: 'Failed to reset password' }));
+                            res.end(JSON.stringify({ error: MESSAGE.errors.failedToResetPassword }));
                             return;
                         }
 
@@ -206,7 +219,7 @@ const resetPassword = async (req, res) => {
 
                         res.statusCode = 200;
                         res.setHeader('Content-Type', 'application/json');
-                        res.end(JSON.stringify({ message: 'Password reset successfully' }));
+                        res.end(JSON.stringify({ message: MESSAGE.messages.passwordResetSuccessful }));
                     }
                 );
             });
@@ -225,7 +238,7 @@ const validateToken = (req, res) => {
     if (!token) {
         res.statusCode = 401;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ authenticated: false, message: 'No token provided' }));
+        res.end(JSON.stringify({ authenticated: false, message: MESSAGE.errors.noTokenProvided }));
         return;
     }
 
@@ -233,11 +246,9 @@ const validateToken = (req, res) => {
         if (err) {
             res.statusCode = 401;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ authenticated: false, message: 'Invalid token' }));
+            res.end(JSON.stringify({ authenticated: false, message: MESSAGE.errors.invalidToken }));
             return;
         }
-
-        incrementApiUsage('/api/validateToken', 'GET', decoded.id);
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');

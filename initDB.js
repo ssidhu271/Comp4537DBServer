@@ -58,30 +58,56 @@ const initializeDatabase = () => {
                                     // Check if the admin user exists
                                     const adminEmail = process.env.ADMIN_EMAIL;
                                     const adminPassword = process.env.ADMIN_PASSWORD;
+                                    const sampleUserEmail = process.env.USER_EMAIL;
+                                    const sampleUserPassword = process.env.USER_PASSWORD;
 
-                                    db.get(queries.checkAdminExists, [adminEmail], async (err, row) => {
+                                    db.get(queries.checkAdminExists, [adminEmail], async (err, adminRow) => {
                                         if (err) {
                                             console.error("Error querying admin user:", err.message);
                                             reject(err);
                                             return;
                                         }
 
-                                        if (!row) {
+                                        if (!adminRow) {
                                             try {
-                                                const hashedPassword = await bcrypt.hash(adminPassword, 10);
-                                                db.run(queries.insertAdminUser, [adminEmail, hashedPassword], (err) => {
+                                                const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
+                                                db.run(queries.insertAdminUser, [adminEmail, hashedAdminPassword], (err) => {
                                                     if (err) {
                                                         reject(err);
-                                                    } else {
-                                                        resolve();
+                                                        return;
                                                     }
                                                 });
                                             } catch (hashError) {
                                                 reject(hashError);
+                                                return;
                                             }
-                                        } else {
-                                            resolve();
                                         }
+
+                                        // Check if the sample user exists
+                                        db.get(queries.checkUserExists, [sampleUserEmail], async (err, userRow) => {
+                                            if (err) {
+                                                console.error("Error querying sample user:", err.message);
+                                                reject(err);
+                                                return;
+                                            }
+
+                                            if (!userRow) {
+                                                try {
+                                                    const hashedSamplePassword = await bcrypt.hash(sampleUserPassword, 10);
+                                                    db.run(queries.insertSampleUser, [sampleUserEmail, hashedSamplePassword], (err) => {
+                                                        if (err) {
+                                                            reject(err);
+                                                        } else {
+                                                            resolve();
+                                                        }
+                                                    });
+                                                } catch (hashError) {
+                                                    reject(hashError);
+                                                }
+                                            } else {
+                                                resolve();
+                                            }
+                                        });
                                     });
                                 });
                             });

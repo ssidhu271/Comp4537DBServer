@@ -1,3 +1,5 @@
+//ChatGPT helped with the creation of this file
+
 const https = require('https');
 const { parse } = require('url');
 const { incrementApiUsage } = require('../controllers/apiController');

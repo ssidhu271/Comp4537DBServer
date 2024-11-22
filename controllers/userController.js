@@ -3,15 +3,16 @@
 const { db, getQuery, runQuery } = require('../utils/dbHelper');
 const { incrementApiUsage } = require('../controllers/apiController');
 const parseBody = require('../utils/parseBody')
+const MESSAGE = require('../lang/messages/en/user');
 
 const getUserData = async (req, res, user) => {
-    incrementApiUsage('/api/getUserData', 'GET', user.id);
+    incrementApiUsage(MESSAGE.api.getUserData, 'GET', user.id);
 
     try {
         // Calculate total API calls specifically for the /api/llm endpoint for this user
         const totalCallsResult = await getQuery(
             'SELECT SUM(request_count) as total_calls FROM api_usage_logs WHERE user_id = ? AND endpoint = ?',
-            [user.id, '/api/LLM']
+            [user.id, MESSAGE.api.llmEndpoint]
         );
 
         const totalCalls = totalCallsResult.total_calls || 0;
@@ -21,14 +22,14 @@ const getUserData = async (req, res, user) => {
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({
             api_calls: totalCalls,
-            message: userExceededLimit ? 'API call limit exceeded' : 'API calls within limit',
-            status: userExceededLimit ? 'warning' : 'ok'
+            message: userExceededLimit ? MESSAGE.messages.apiCallLimitExceeded : MESSAGE.messages.apiCallsWithinLimit,
+            status: userExceededLimit ? MESSAGE.status.warning : MESSAGE.status.ok
         }));
     } catch (error) {
         console.error('Error in getUserData:', error);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Server error' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.serverError }));
     }
 };
 
@@ -37,16 +38,15 @@ const updateUserRole = async (req, res) => {
     if (!req.user || req.user.role !== 'admin') {
         res.statusCode = 403;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Access denied' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.accessDenied }));
         return;
     }
 
-    incrementApiUsage('/api/updateUserRole', 'PUT', req.user.id);
+    incrementApiUsage(MESSAGE.api.updateUserRole, 'PUT', req.user.id);
 
     try {
         const { userId, newRole } = await parseBody(req);
 
-        // Retrieve the role_id for the specified new role
         const roleResult = await getQuery(
             `
             SELECT id AS role_id
@@ -59,7 +59,7 @@ const updateUserRole = async (req, res) => {
         if (!roleResult) {
             res.statusCode = 400;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: 'Invalid role specified' }));
+            res.end(JSON.stringify({ error: MESSAGE.errors.invalidRole }));
             return;
         }
 
@@ -77,12 +77,12 @@ const updateUserRole = async (req, res) => {
 
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: 'User role updated successfully' }));
+        res.end(JSON.stringify({ message: MESSAGE.messages.userRoleUpdated }));
     } catch (error) {
         console.error('Error updating user role:', error);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: 'Failed to update user role' }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.failedToUpdateUserRole }));
     }
 };
 

@@ -80,6 +80,15 @@ const queries = {
             UNIQUE(user_id, endpoint, method) -- Unique constraint per user
         )
     `,
+    checkUserExists: `
+    SELECT u.* 
+    FROM users u
+    WHERE u.email = ?
+    `,
+    insertSampleUser: `
+        INSERT INTO users (email, password_hash, role_id)
+        VALUES (?, ?, (SELECT id FROM roles WHERE role_name = 'user'))
+    `,
 };
 
 // Function to run queries (insert, update, delete) with parameters
