@@ -155,10 +155,10 @@ const getApiUsageStats = async (req, res) => {
 
     try {
         const stats = await allQuery(`
-            SELECT endpoint, method, request_count
+            SELECT endpoint, method, SUM(request_count) AS request_count
             FROM api_usage_logs
             GROUP BY endpoint, method
-            ORDER BY endpoint, method
+            ORDER BY endpoint, method;
         `);
 
         res.statusCode = 200;
