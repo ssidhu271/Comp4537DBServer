@@ -1,6 +1,7 @@
 //ChatGPT helped with the creation of this file
 
 const nodemailer = require('nodemailer');
+const MESSAGE = require('../lang/messages/en/user');
 require('dotenv').config();
 
 const transporter = nodemailer.createTransport({
@@ -18,10 +19,10 @@ const transporter = nodemailer.createTransport({
 // Send a password reset code
 const sendResetCode = async (email, resetCode) => {
     const mailOptions = {
-        from: `"Grey Dune" <${process.env.EMAIL_USER}>`,
+        from: `"${MESSAGE.email.fromName}" <${process.env.EMAIL_USER}>`,
         to: email,
-        subject: 'Password Reset Code',
-        text: `Your password reset code is: ${resetCode}`,
+        subject: MESSAGE.messages.resetCodeEmailSubject,
+        text: MESSAGE.messages.resetCodeEmailBody(resetCode),
     };
 
     try {
@@ -29,7 +30,7 @@ const sendResetCode = async (email, resetCode) => {
         console.log('Email sent: ', info.response);
     } catch (error) {
         console.error('Error sending email: ', error);
-        throw new Error('Failed to send email');
+        throw new Error(MESSAGE.errors.emailSendFailure);
     }
 };
 

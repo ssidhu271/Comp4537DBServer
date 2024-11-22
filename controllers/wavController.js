@@ -5,13 +5,14 @@ const handleCors = require('../middlewares/handleCors');
 const fs = require('fs');
 const path = require('path');
 const { incrementApiUsage } = require('../controllers/apiController');
+const MESSAGE = require('../lang/messages/en/user');
 
 // Add a new .wav file
 const addWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
 
     const userId = req.user.id;
-    incrementApiUsage('/api/addWavFile', 'POST', userId);
+    incrementApiUsage(MESSAGE.api.addWavFile, 'POST', userId);
 
     try {
         let body = "";
@@ -42,12 +43,12 @@ const addWavFile = async (req, res) => {
 
             res.statusCode = 201;
             res.setHeader("Content-Type", "application/json");
-            res.end(JSON.stringify({ message: "WAV file added successfully.", filePath: relativePath }));
+            res.end(JSON.stringify({ message: MESSAGE.messages.wavFileAddedSuccessfully, filePath: relativePath }));
         });
     } catch (error) {
         console.error("Error in addWavFile:", error);
         res.statusCode = 500;
-        res.end(JSON.stringify({ error: "Error adding WAV file." }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.errorAddingWavFile }));
     }
 };
 
@@ -55,7 +56,7 @@ const getWavFilesByUser = async (req, res) => {
     if (handleCors(req, res)) return;
 
     const userId = req.user.id;
-    incrementApiUsage('/api/getWavFilesByUser', 'GET', userId);
+    incrementApiUsage(MESSAGE.api.getWavFilesByUser, 'GET', userId);
 
     try {
         const userId = req.user.id;
@@ -67,7 +68,7 @@ const getWavFilesByUser = async (req, res) => {
         console.error("Error in getWavFilesByUser:", error);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: "Error fetching WAV files." }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.errorFetchingWavFiles }));
     }
 };
 
@@ -78,7 +79,7 @@ const updateWavFileName = async (req, res) => {
     if (handleCors(req, res)) return;
 
     const userId = req.user.id;
-    incrementApiUsage('/api/updateWavFileName', 'PUT', userId);
+    incrementApiUsage(MESSAGE.api.updateWavFileName, 'PUT', userId);
 
     try {
         let body = '';
@@ -91,13 +92,13 @@ const updateWavFileName = async (req, res) => {
             await runQuery('UPDATE wav_files SET file_name = ? WHERE id = ? AND user_id = ?', [fileName, id, userId]);
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ message: "WAV file name updated successfully." }));
+            res.end(JSON.stringify({ message: MESSAGE.messages.wavFileNameUpdatedSuccessfully }));
         });
     } catch (error) {
         console.error("Error in updateWavFileName:", error);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: "Error updating WAV file name." }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.errorUpdatingWavFileName }));
     }
 };
 
@@ -106,7 +107,7 @@ const deleteWavFile = async (req, res) => {
     if (handleCors(req, res)) return;
 
     const userId = req.user.id;
-    incrementApiUsage('/api/deleteWavFile', 'DELETE', userId);
+    incrementApiUsage(MESSAGE.api.deleteWavFile, 'DELETE', userId);
 
     try {
         const userId = req.user.id;
@@ -115,12 +116,12 @@ const deleteWavFile = async (req, res) => {
         await runQuery('DELETE FROM wav_files WHERE id = ? AND user_id = ?', [id, userId]);
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ message: "WAV file deleted successfully." }));
+        res.end(JSON.stringify({ message: MESSAGE.messages.wavFileDeletedSuccessfully }));
     } catch (error) {
         console.error("Error in deleteWavFile:", error);
         res.statusCode = 500;
         res.setHeader('Content-Type', 'application/json');
-        res.end(JSON.stringify({ error: "Error deleting WAV file." }));
+        res.end(JSON.stringify({ error: MESSAGE.errors.errorDeletingWavFile }));
     }
 };
 
