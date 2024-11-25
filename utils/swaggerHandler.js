@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const swaggerUiPath = path.join(__dirname, "swagger-ui-dist");
+const swaggerUiPath = path.join(__dirname, "../swagger-ui-dist");
 
 function serveSwaggerJSON(req, res) {
     const filePath = path.join(__dirname, "swagger.json");
