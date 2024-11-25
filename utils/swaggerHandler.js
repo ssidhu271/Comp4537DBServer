@@ -4,7 +4,7 @@ const path = require('path');
 const swaggerUiPath = path.join(__dirname, "../swagger-ui-dist");
 
 function serveSwaggerJSON(req, res) {
-    const filePath = path.join(__dirname, "swagger.json");
+    const filePath = path.join(__dirname, "../swagger.json");
     fs.readFile(filePath, "utf8", (err, data) => {
         if (err) {
             res.writeHead(404, { "Content-Type": "application/json" });
