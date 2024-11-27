@@ -9,7 +9,7 @@ const { db, runQuery, getQuery } = require('../utils/dbHelper');
 const cookie = require('cookie');
 const { incrementApiUsage } = require('./apiController');
 const MESSAGE = require('../lang/messages/en/user');
-const { validateEmail } = require('../utils/validation');
+const { validateEmail, validateNumber  } = require('../utils/validation');
 
 const login = async (req, res) => {
     try {
